@@ -571,7 +571,17 @@
             try {
                 const req = await fetch('recaudacion.json?v=' + Date.now());
                 if (!req.ok) throw new Error("HTTP " + req.status);
-                raw = await req.json();
+                let raw_compressed = await req.json();
+                
+                // DECOMPRESSOR ENGINE
+                const dict = raw_compressed.__dict__ || [];
+                if (dict.length > 0 && Array.isArray(raw_compressed.data)) {
+                    raw_compressed.data = raw_compressed.data.map(row => {
+                        return row.map(v => (typeof v === 'number' && Number.isInteger(v) && v < 0) ? dict[-v - 1] : v);
+                    });
+                }
+                raw = raw_compressed;
+                
                 document.getElementById('last-update-txt').textContent = raw.last_update || '--';
                 initFilters();
                 render();

@@ -20,6 +20,16 @@ COUNTRY_MAP = {
     'UR': 'URUGUAY', 'UY': 'URUGUAY', 'CO': 'COLOMBIA'
 }
 
+class DataDictCompressor:
+    def __init__(self):
+        self.dict = {}
+        self.list = []
+    def add(self, string_val):
+        if string_val not in self.dict:
+            self.dict[string_val] = len(self.list)
+            self.list.append(string_val)
+        return -(self.dict[string_val] + 1)
+
 def parse_tag(tag):
     s = str(tag).upper().strip()
     base = s.split('/')[0].strip()
@@ -53,6 +63,7 @@ def clean_currency(val):
 
 def process_recaudacion():
     print(f"🚀 Procesando Análisis de Recaudación (Restaurado)...")
+    dc = DataDictCompressor()
     if not os.path.exists(EXCEL_PATH): return
 
     xls = pd.ExcelFile(EXCEL_PATH)
@@ -110,13 +121,13 @@ def process_recaudacion():
                 except: continue
 
             all_transactions.append([
-                fe_eco.strftime('%Y-%m'), COUNTRY_MAP.get(p_code, 'PANAMA'), 
-                brand, str(row.get('Almacén', 'Ecommerce')).split('/')[0].strip(),
-                fe_eco.strftime('%Y-%m-%d'), str(row.get('Orden Madre', ref_eco)),
-                ref_eco, round(netsales_local / rate, 2), rate,
-                str(row.get('Canal de Venta', 'Web Store')), 1 if is_active else 0,
-                fe_eco.strftime('%Y'), fe_eco.strftime('%m'),
-                str(row.get('Region', 'CENTRO')), str(row.iloc[6]),
+                dc.add(fe_eco.strftime('%Y-%m')), dc.add(COUNTRY_MAP.get(p_code, 'PANAMA')), 
+                dc.add(brand), dc.add(str(row.get('Almacén', 'Ecommerce')).split('/')[0].strip()),
+                dc.add(fe_eco.strftime('%Y-%m-%d')), dc.add(str(row.get('Orden Madre', ref_eco))),
+                dc.add(ref_eco), round(netsales_local / rate, 2), rate,
+                dc.add(str(row.get('Canal de Venta', 'Web Store'))), 1 if is_active else 0,
+                dc.add(fe_eco.strftime('%Y')), dc.add(fe_eco.strftime('%m')),
+                dc.add(str(row.get('Region', 'CENTRO'))), dc.add(str(row.iloc[6])),
                 netsales_local # 15: Local Amount (Opcional)
             ])
 
@@ -124,6 +135,7 @@ def process_recaudacion():
         'last_update': datetime.now().strftime('%Y-%m-%d %H:%M'),
         'rates': EXCHANGE_RATES,
         'ppto': ppto_list,
+        '__dict__': dc.list,
         'data': all_transactions
     }
 

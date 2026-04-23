@@ -16,6 +16,27 @@ TAX_RATES = {
 
 MESES = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
 
+class DataDictCompressor:
+    def __init__(self):
+        self.dict = {}
+        self.list = []
+    def add(self, string_val):
+        if not isinstance(string_val, str): return string_val
+        if string_val not in self.dict:
+            self.dict[string_val] = len(self.list)
+            self.list.append(string_val)
+        return -(self.dict[string_val] + 1)
+
+def recursive_compress(data, dc):
+    if isinstance(data, dict):
+        return {k: recursive_compress(v, dc) for k, v in data.items()}
+    elif isinstance(data, list):
+        return [recursive_compress(v, dc) for v in data]
+    elif isinstance(data, str) and len(data) > 0:
+        return dc.add(data)
+    else:
+        return data
+
 def to_float(v):
     try:
         if pd.isnull(v): return 0.0
@@ -120,9 +141,13 @@ def process_dashboard():
     final_data["periodo_str"] = periodo_str
     print(f"📊 Datos procesados hasta: {periodo_str}")
 
-    # 4. GUARDAR JSON
+    # 4. COMPRESIÓN Y GUARDADO JSON
+    dc = DataDictCompressor()
+    compressed_data = recursive_compress(final_data, dc)
+    compressed_data['__dict__'] = dc.list
+
     with open(JSON_PATH, 'w', encoding='utf-8') as f:
-        json.dump(final_data, f, ensure_ascii=False)
+        json.dump(compressed_data, f, ensure_ascii=False)
 
     # 5. ACTUALIZAR HTML
     if os.path.exists(HTML_PATH):

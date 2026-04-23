@@ -407,7 +407,23 @@
             try {
                 const r = await fetch('resultados_data.json?v=' + Date.now());
                 if (!r.ok) throw new Error("No se pudo cargar resultados_data.json. Ejecuta el script Python y usa un servidor local.");
-                raw = await r.json();
+                let raw_compressed = await r.json();
+                
+                // DECOMPRESSOR ENGINE
+                const dict = raw_compressed.__dict__ || [];
+                function decompress(data) {
+                    if (Array.isArray(data)) return data.map(decompress);
+                    if (data !== null && typeof data === 'object') {
+                        let res = {};
+                        for (let k in data) res[k] = decompress(data[k]);
+                        return res;
+                    }
+                    if (typeof data === 'number' && Number.isInteger(data) && data < 0 && dict[-data - 1] !== undefined) {
+                        return dict[-data - 1];
+                    }
+                    return data;
+                }
+                raw = decompress(raw_compressed);
                 MAX = raw.MAX;
 
                 // Configuración inicial de Países y Cadenas

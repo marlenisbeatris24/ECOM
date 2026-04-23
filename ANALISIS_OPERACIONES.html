@@ -520,7 +520,16 @@
         async function init() {
             try {
                 const res = await fetch('operaciones_data.json?v=' + Date.now());
-                raw = await res.json();
+                let raw_compressed = await res.json();
+                
+                // DECOMPRESSOR ENGINE
+                const dict = raw_compressed.__dict__ || [];
+                if (dict.length > 0 && Array.isArray(raw_compressed.raw_orders)) {
+                    raw_compressed.raw_orders = raw_compressed.raw_orders.map(row => {
+                        return row.map(v => (typeof v === 'number' && Number.isInteger(v) && v < 0) ? dict[-v - 1] : v);
+                    });
+                }
+                raw = raw_compressed;
                 document.getElementById('v-last').textContent = 'Actualización: ' + raw.last_update;
 
                 // Years from periods

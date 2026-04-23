@@ -25,6 +25,16 @@ NAME_TO_CODE = {
     'URUGUAY': 'UY', 'COLOMBIA': 'CO'
 }
 
+class DataDictCompressor:
+    def __init__(self):
+        self.dict = {}
+        self.list = []
+    def add(self, string_val):
+        if string_val not in self.dict:
+            self.dict[string_val] = len(self.list)
+            self.list.append(string_val)
+        return -(self.dict[string_val] + 1)
+
 def parse_tag(tag):
     s = str(tag).upper().strip()
     base = s.split('/')[0].strip()
@@ -67,6 +77,7 @@ def clean_currency(val):
 
 def process_ops():
     print(f"🚀 Restaurando y Sincronizando reporte de Operaciones...")
+    dc = DataDictCompressor()
     if not os.path.exists(EXCEL_PATH): 
         print(f"❌ No se encontró {EXCEL_PATH}")
         return
@@ -170,15 +181,15 @@ def process_ops():
     light_orders = []
     for o in all_orders:
         light_orders.append([
-            o['periodo'], o['pais'], o['brand'], o['tienda'], o['fecha'], # 0-4
+            dc.add(o['periodo']), dc.add(o['pais']), dc.add(o['brand']), dc.add(o['tienda']), dc.add(o['fecha']), # 0-4
             1 if o['is_fulfilled'] else 0, round(o['total_usd'], 2), # 5-6
             round(o['days'], 2) if o['days'] else 0, # 7
-            o['canc_motivo'], o['brand'], o['genero'], o['tipo'], # 8-11
-            o['city'], o['sku'], o['nombre'], o['carrier'], # 12-15
+            dc.add(o['canc_motivo']), dc.add(o['brand']), dc.add(o['genero']), dc.add(o['tipo']), # 8-11
+            dc.add(o['city']), dc.add(o['sku']), dc.add(o['nombre']), dc.add(o['carrier']), # 12-15
             o['is_cancelled_strict'], o['is_pago_verificado_strict'], # 16-17
-            o['metodo_entrega'], o['qty'], o['ref'], # 18-20
+            dc.add(o['metodo_entrega']), o['qty'], dc.add(o['ref']), # 18-20
             1 if o['is_fulfilled'] else 0, # 21
-            o['orden_madre'] # 22
+            dc.add(o['orden_madre']) # 22
         ])
 
     results = {
@@ -191,6 +202,7 @@ def process_ops():
         'rates': EXCHANGE_RATES,
         'name_to_code': NAME_TO_CODE,
         'ppto': ppto_list,
+        '__dict__': dc.list,
         'raw_orders': light_orders
     }
 
