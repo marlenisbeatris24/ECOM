@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análisis de Recaudación | Dashboard Ejecutivo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg: #f3f4f6;
+            --card: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --brand: #0284c7;
+            --success: #10b981;
+            --danger: #ef4444;
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text-main);
+            padding: 2rem;
+            padding-bottom: 5rem;
+            min-height: 100vh;
+        }
+
+        /* HEADER & FILTERS */
+        .glass-header {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 1.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--shadow);
+            margin-bottom: 2rem;
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .header-title h1 {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--text-main);
+            text-transform: uppercase;
+            letter-spacing: -0.02em;
+        }
+
+        .last-update {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-select {
+            padding: 0.6rem 1.2rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-main);
+            background: #fff;
+            cursor: pointer;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            min-width: 140px;
+        }
+
+        .filter-select:focus {
+            border-color: var(--brand);
+            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1);
+        }
+
+        /* TEMA EJECUTIVO: KPI GRID — White cards with colored border */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .kpi-card {
+            border-radius: 16px;
+            padding: 1.5rem;
+            background: #ffffff;
+            color: var(--text-main);
+            position: relative;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 140px;
+            transition: transform 0.2s ease;
+            border: 1px solid var(--border);
+            border-left: 5px solid #64748b;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px -5px rgb(0 0 0 / 0.1);
+        }
+
+        /* Colored left-border accents per card */
+        .card-green {
+            border-left-color: #0f766e;
+        }
+
+        .card-orange {
+            border-left-color: #1e40af;
+        }
+
+        .card-blue {
+            border-left-color: #475569;
+        }
+
+        .card-purple {
+            border-left-color: #6d28d9;
+        }
+
+        .card-rose {
+            border-left-color: #be123c;
+        }
+
+        .kpi-label {
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 0.4rem;
+        }
+
+        .kpi-value {
+            font-size: 2rem;
+            font-weight: 800;
+            line-height: 1;
+            margin-bottom: 0.4rem;
+            color: var(--text-main);
+        }
+
+        .kpi-trend {
+            font-size: 0.8rem;
+            font-weight: 600;
+            background: #f1f5f9;
+            color: var(--text-muted);
+            padding: 0.2rem 0.6rem;
+            border-radius: 20px;
+            display: inline-block;
+            align-self: flex-start;
+        }
+
+        .kpi-icon {
+            position: absolute;
+            right: 1rem;
+            top: 1rem;
+            font-size: 2rem;
+            opacity: 0.6;
+            transform: none;
+        }
+
+        /* Icon colors matching their card accent */
+        .card-green .kpi-icon {
+            color: #0f766e;
+        }
+
+        .card-orange .kpi-icon {
+            color: #1e40af;
+        }
+
+        .card-blue .kpi-icon {
+            color: #475569;
+        }
+
+        .card-purple .kpi-icon {
+            color: #6d28d9;
+        }
+
+        .card-rose .kpi-icon {
+            color: #be123c;
+        }
+
+        .progress-track {
+            background: #e2e8f0;
+            border-radius: 4px;
+            height: 6px;
+            margin-top: 0.8rem;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            background: #0f766e;
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        /* CHARTS SECTION - FIXING THE STRETCH ISSUE */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        @media (max-width: 1024px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background: var(--card);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-header {
+            font-size: 1.1rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            color: var(--text-main);
+        }
+
+        .panel-header .material-icons {
+            color: var(--brand);
+        }
+
+        /* This strict chart-wrapper prevents Chart.js from stretching */
+        .chart-wrapper {
+            position: relative;
+            width: 100%;
+            height: 320px;
+            /* Fixed height is mandatory for ChartJS to behave inside grid */
+            flex-grow: 1;
+        }
+
+        .chart-wrapper.tall {
+            height: 450px;
+        }
+
+        /* SCORECARD GRID */
+        .score-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.2rem;
+        }
+
+        .score-card {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.2rem;
+            transition: all 0.2s;
+        }
+
+        .score-card:hover {
+            background: #fff;
+            box-shadow: var(--shadow);
+            border-color: #cbd5e1;
+        }
+
+        .score-card-title {
+            font-weight: 800;
+            font-size: 1.05rem;
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 0.5rem;
+            margin-bottom: 0.8rem;
+        }
+
+        .score-grid-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.8rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .score-val {
+            display: block;
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: var(--text-main);
+            margin-top: 0.1rem;
+        }
+
+        .badge-trend {
+            padding: 0.2rem 0.5rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+
+        .badge-pos {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge-neg {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        /* TABLE */
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            padding: 1rem;
+            border-bottom: 2px solid var(--border);
+            background: var(--bg);
+            font-weight: 700;
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        tr:hover td {
+            background: #f8fafc;
+        }
+
+        .num {
+            text-align: right;
+            font-family: monospace;
+            font-size: 1rem;
+            color: var(--text-main);
+        }
+
+        .gap-pos {
+            color: var(--success);
+            font-weight: 700;
+        }
+
+        .gap-neg {
+            color: var(--danger);
+            font-weight: 700;
+        }
+
+        /* FLOATING BACK BUTTON */
+        .floating-back {
+            position: fixed;
+            bottom: 2rem;
+            left: 2rem;
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(8px);
+            color: #fff;
+            padding: 0.8rem 1.5rem;
+            border-radius: 30px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 600;
+            text-decoration: none;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+
+        .floating-back:hover {
+            transform: translateY(-3px) scale(1.02);
+            background: #000;
+        }
+    </style>
+</head>
+
+<body>
+
+    <a href="index.html" class="floating-back">
+        <span class="material-icons">west</span> Volver al Menú
+    </a>
+
+    <!-- HEADER & FILTERS -->
+    <div class="glass-header">
+        <div class="header-title">
+            <span class="material-icons" style="color: var(--brand); font-size: 2rem;">query_stats</span>
+            <div>
+                <h1>Análisis Financiero de Recaudación</h1>
+                <div class="last-update">Sincronización: <span id="last-update-txt"
+                        style="color: var(--brand);">Cargando...</span></div>
+            </div>
+        </div>
+        <div class="filter-group">
+            <select class="filter-select" id="f-year" onchange="updateMonths(); render();"></select>
+            <select class="filter-select" id="f-month" onchange="render();"></select>
+            <select class="filter-select" id="f-country" onchange="render();">
+                <option value="ALL">TODOS LOS PAÍSES</option>
+            </select>
+            <select class="filter-select" id="f-brand" onchange="render();">
+                <option value="ALL">TODAS LAS CADENAS</option>
+                <option value="SPORTLINE">SPORTLINE</option>
+                <option value="KICKS">KICKS</option>
+                <option value="LA CANCHA">LA CANCHA</option>
+                <option value="CONVERSE">CONVERSE</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- EXECUTIVE KPIs -->
+    <div class="kpi-grid">
+        <!-- 1. Progreso Meta Anual -->
+        <div class="kpi-card card-green">
+            <span class="material-icons kpi-icon">emoji_events</span>
+            <div class="kpi-label">Progreso Meta Anual</div>
+            <div id="kpi-prog" class="kpi-value">0%</div>
+            <div id="kpi-ppto-amt" class="kpi-trend"
+                style="background: #0f766e; color: #fff; font-weight: 800; padding: 0.3rem 0.6rem; border-radius: 6px; display: inline-block;">
+                Meta: $0</div>
+            <div class="progress-track">
+                <div id="kpi-prog-bar" class="progress-fill" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <!-- 2. Ventas YTD vs LY -->
+        <div class="kpi-card card-orange">
+            <span class="material-icons kpi-icon">stacked_line_chart</span>
+            <div class="kpi-label">Ventas YTD vs LY</div>
+            <div id="kpi-ytd" class="kpi-value">$0</div>
+            <div style="display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.2rem;">
+                <div id="kpi-ytd-ly" class="kpi-trend">--</div>
+                <div id="kpi-ytd-cump" class="kpi-trend">0% Cump.</div>
+                <div id="kpi-ytd-ppto" class="kpi-trend" style="background: #1e40af; color: #fff; font-weight: 800;">
+                    Meta: $0</div>
+            </div>
+        </div>
+
+        <!-- 3. Ventas Periodo -->
+        <div class="kpi-card card-blue">
+            <span class="material-icons kpi-icon">attach_money</span>
+            <div class="kpi-label">Ventas Periodo</div>
+            <div id="kpi-sales" class="kpi-value">$0</div>
+            <div style="display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.2rem;">
+                <div id="kpi-sales-ly" class="kpi-trend">--</div>
+                <div id="kpi-sales-cump" class="kpi-trend">0% Cump.</div>
+                <div id="kpi-sales-ppto" class="kpi-trend" style="background: #475569; color: #fff; font-weight: 800;">
+                    Meta: $0</div>
+            </div>
+        </div>
+
+        <!-- 4. Gap Presupuestal -->
+        <div class="kpi-card" style="border-left-color: #334155;">
+            <span class="material-icons kpi-icon" style="color: #334155;">account_balance_wallet</span>
+            <div class="kpi-label">Gap Presupuestal</div>
+            <div id="kpi-gap-usd" class="kpi-value">$0</div>
+            <div id="kpi-gap-pct" class="kpi-trend">0% Gap</div>
+        </div>
+
+        <!-- 5. Ticket Promedio -->
+        <div class="kpi-card card-purple">
+            <span class="material-icons kpi-icon">receipt_long</span>
+            <div class="kpi-label">Ticket Promedio</div>
+            <div id="kpi-ticket" class="kpi-value">$0</div>
+            <div id="kpi-ticket-ly" class="kpi-trend">--</div>
+        </div>
+
+        <!-- 6. Top Sucursal -->
+        <div class="kpi-card card-rose">
+            <span class="material-icons kpi-icon">storefront</span>
+            <div class="kpi-label">Top Sucursal (Peso %)</div>
+            <div id="kpi-top-branch" class="kpi-value" style="font-size: 1.5rem;">--</div>
+            <div id="kpi-top-peso" class="kpi-trend">--</div>
+        </div>
+    </div>
+
+    <!-- CHARTS GRID ROW 1 -->
+    <div class="main-grid">
+        <div class="panel">
+            <div class="panel-header"><span class="material-icons">timeline</span> Tendencia Diaria / Mensual</div>
+            <div class="chart-wrapper"><canvas id="chart-trend"></canvas></div>
+        </div>
+        <div class="panel">
+            <div class="panel-header"><span class="material-icons">donut_large</span> Mix Método de Pago</div>
+            <div class="chart-wrapper"><canvas id="chart-pay"></canvas></div>
+        </div>
+    </div>
+
+    <!-- CHARTS ROW 2 (Full Width Top 15) -->
+    <div class="panel" style="margin-bottom: 2rem;">
+        <div class="panel-header"><span class="material-icons">leaderboard</span> Top 15 Recaudación por Sucursal</div>
+        <div class="chart-wrapper tall"><canvas id="chart-top15"></canvas></div>
+    </div>
+
+    <!-- BUDGET TABLE -->
+    <div class="panel" style="margin-bottom: 2rem; padding: 0; overflow: hidden;">
+        <div class="panel-header" style="margin: 1.5rem 1.5rem 0.5rem 1.5rem;"><span
+                class="material-icons">table_chart</span> Análisis de Gaps Regionales</div>
+        <div class="table-responsive">
+            <table id="table-ppto">
+                <thead>
+                    <tr>
+                        <th>País</th>
+                        <th>Cadena</th>
+                        <th class="num">Recaudado Local</th>
+                        <th class="num">Recaudado USD</th>
+                        <th class="num">Presupuesto</th>
+                        <th class="num">Gap Dólares (USD)</th>
+                        <th class="num">Gap %</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- SCORECARD -->
+    <div class="panel" style="background: transparent; border: none; box-shadow: none; padding: 0;">
+        <div class="panel-header" style="font-size: 1.3rem;"><span class="material-icons">assignment_turned_in</span>
+            Scorecard de Operaciones (Sucursales)</div>
+        <div id="scorecard-grid" class="score-container"></div>
+    </div>
+
+
+    <script>
+        let raw = { data: [], ppto: [], rates: {} };
+        let charts = {};
+
+        const usd = (v) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(v || 0);
+
+        async function init() {
+            try {
+                const req = await fetch('recaudacion.json?v=' + Date.now());
+                if (!req.ok) throw new Error("HTTP " + req.status);
+                raw = await req.json();
+                document.getElementById('last-update-txt').textContent = raw.last_update || '--';
+                initFilters();
+                render();
+            } catch (e) {
+                console.error(e);
+                alert("Error cargando el JSON de datos. Revise si el generador Python compiló correctamente.");
+            }
+        }
+
+        function initFilters() {
+            const fYear = document.getElementById('f-year');
+            const fCountry = document.getElementById('f-country');
+
+            const countries = [...new Set(raw.data.map(t => t[1]))].sort();
+            countries.forEach(c => c && fCountry.add(new Option(c, c)));
+
+            const years = [...new Set(raw.data.map(t => t[11]))].sort().reverse();
+            years.forEach(y => y && fYear.add(new Option(y, y)));
+
+            updateMonths();
+        }
+
+        function updateMonths() {
+            const fY = document.getElementById('f-year').value;
+            const fM = document.getElementById('f-month');
+            fM.innerHTML = '<option value="YTD">YTD (Acumulado)</option>';
+
+            const mData = [...new Set(raw.data.filter(t => t[11] === fY).map(t => t[12]))].sort();
+            const names = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+            mData.forEach(m => fM.add(new Option(names[parseInt(m) - 1], m)));
+        }
+
+        const PAY_DISPLAY_NAMES = {
+            'MERCADOPAGO_ADBPAYMENT_CHECKOUT_PRO': 'Mercado Pago Tarjetas CR',
+            'MERCADOPAGO_ADBPAYMENT_CC': 'Mercado Pago Debito',
+            'CHCYBERSOURCE': 'CBS Tarjetas CR'
+        };
+
+        function cleanPaymentStr(val) {
+            if (!val || String(val).trim() === '' || String(val).toLowerCase() === 'nan') return 'OTROS';
+            const raw = String(val).trim().toUpperCase();
+            return PAY_DISPLAY_NAMES[raw] || raw;
+        }
+
+        function formatDiff(val, prev) {
+            if (prev === 0) return '+100% YoY';
+            const d = ((val - prev) / prev) * 100;
+            return `${d >= 0 ? '+' : ''}${d.toFixed(1)}% YoY`;
+        }
+
+        function render() {
+            const y = document.getElementById('f-year').value;
+            const m = document.getElementById('f-month').value;
+            const c = document.getElementById('f-country').value;
+            const b = document.getElementById('f-brand').value;
+            const isYtd = (m === 'YTD');
+            const ly = (parseInt(y) - 1).toString();
+
+            const isMatch = (t, testYr, testM) => {
+                if (t[11] !== testYr) return false;
+                if (!isYtd && t[12] !== testM) return false;
+                if (c !== 'ALL' && t[1] !== c) return false;
+                if (b !== 'ALL' && t[2] !== b) return false;
+                return true;
+            };
+
+            const dataCurr = raw.data.filter(t => isMatch(t, y, m));
+            const dataLy = raw.data.filter(t => isMatch(t, ly, m));
+            const ytdCurr = raw.data.filter(t => t[11] === y && (c === 'ALL' || t[1] === c) && (b === 'ALL' || t[2] === b));
+            const ytdLy = raw.data.filter(t => t[11] === ly && (c === 'ALL' || t[1] === c) && (b === 'ALL' || t[2] === b));
+
+            const sumValid = arr => arr.reduce((acc, t) => t[10] === 1 ? acc + t[7] : acc, 0);
+            const sales = sumValid(dataCurr);
+            const salesLy = sumValid(dataLy);
+            const salesYtd = sumValid(ytdCurr);
+            const salesYtdLy = sumValid(ytdLy);
+
+            const getTicket = arr => {
+                const mSet = new Set();
+                let sum = 0;
+                arr.forEach(t => { if (t[10] === 1) { mSet.add(t[5]); sum += t[7]; } });
+                return mSet.size > 0 ? sum / mSet.size : 0;
+            };
+
+            const tkt = getTicket(dataCurr);
+            const tktLy = getTicket(dataLy);
+
+            let anualPpto = 0;
+            let pptoPeriodo = 0;
+            let pptoYtd = 0;
+
+            raw.ppto.forEach(p => {
+                if (p.periodo.startsWith(y)) {
+                    if ((c === 'ALL' || p.pais === c) && (b === 'ALL' || p.brand === b)) {
+                        anualPpto += p.usd;
+                        const pMonth = p.periodo.split('-')[1];
+
+                        if (isYtd || parseInt(pMonth) <= parseInt(m)) {
+                            pptoYtd += p.usd;
+                        }
+
+                        if (isYtd) {
+                            pptoPeriodo += p.usd;
+                        } else if (pMonth === m) {
+                            pptoPeriodo += p.usd;
+                        }
+                    }
+                }
+            });
+
+            // UPDATING DOM KPIs
+            function applyDiffStyle(elId, val, prev) {
+                const txt = formatDiff(val, prev);
+                const isPos = !txt.includes('-');
+                document.getElementById(elId).textContent = txt;
+                document.getElementById(elId).style.color = isPos ? '#047857' : '#dc2626';
+                document.getElementById(elId).style.background = isPos ? '#d1fae5' : '#fee2e2';
+            }
+
+            document.getElementById('kpi-sales').textContent = usd(sales);
+            applyDiffStyle('kpi-sales-ly', sales, salesLy);
+            document.getElementById('kpi-sales-ppto').textContent = `Meta: ${usd(pptoPeriodo)}`;
+            const cumpSales = pptoPeriodo > 0 ? (sales / pptoPeriodo) * 100 : 0;
+            document.getElementById('kpi-sales-cump').textContent = `${cumpSales.toFixed(1)}% Cump.`;
+            document.getElementById('kpi-sales-cump').style.color = cumpSales >= 100 ? '#047857' : '#dc2626';
+            document.getElementById('kpi-sales-cump').style.background = cumpSales >= 100 ? '#d1fae5' : '#fee2e2';
+
+            const prog = anualPpto > 0 ? (salesYtd / anualPpto) * 100 : 0;
+            document.getElementById('kpi-prog').textContent = prog.toFixed(1) + '%';
+            document.getElementById('kpi-prog-bar').style.width = Math.min(prog, 100) + '%';
+            document.getElementById('kpi-ppto-amt').textContent = `Meta: ${usd(anualPpto)}`;
+
+            const gapUsd = sales - pptoPeriodo;
+            const gapPct = pptoPeriodo > 0 ? (gapUsd / pptoPeriodo) * 100 : 0;
+            document.getElementById('kpi-gap-usd').textContent = usd(gapUsd);
+            document.getElementById('kpi-gap-pct').textContent = `${gapPct >= 0 ? '+' : ''}${gapPct.toFixed(1)}% Gap`;
+            document.getElementById('kpi-gap-usd').style.color = gapUsd >= 0 ? '#047857' : '#dc2626';
+            document.getElementById('kpi-gap-pct').style.color = '#fff';
+            document.getElementById('kpi-gap-pct').style.background = gapUsd >= 0 ? '#047857' : '#dc2626';
+
+            document.getElementById('kpi-ticket').textContent = usd(tkt);
+            applyDiffStyle('kpi-ticket-ly', tkt, tktLy);
+
+            document.getElementById('kpi-ytd').textContent = usd(salesYtd);
+            applyDiffStyle('kpi-ytd-ly', salesYtd, salesYtdLy);
+            document.getElementById('kpi-ytd-ppto').textContent = `Meta: ${usd(pptoYtd)}`;
+            const cumpYtd = pptoYtd > 0 ? (salesYtd / pptoYtd) * 100 : 0;
+            document.getElementById('kpi-ytd-cump').textContent = `${cumpYtd.toFixed(1)}% Cump.`;
+            document.getElementById('kpi-ytd-cump').style.color = cumpYtd >= 100 ? '#047857' : '#dc2626';
+            document.getElementById('kpi-ytd-cump').style.background = cumpYtd >= 100 ? '#d1fae5' : '#fee2e2';
+
+            drawVisuals(dataCurr, isYtd, sales);
+            buildTable(dataCurr, y, m, c, b, isYtd);
+            buildScorecard(dataCurr, dataLy);
+        }
+
+        function drawVisuals(data, isYtd, totSls) {
+            const tMap = {}, pMap = {}, sMap = {};
+
+            data.forEach(t => {
+                if (t[10] === 0) return;
+                const amt = t[7];
+                const dKey = isYtd ? t[0] : t[4];
+                const pKey = cleanPaymentStr(t[14]);
+                const sName = t[3];
+
+                tMap[dKey] = (tMap[dKey] || 0) + amt;
+                pMap[pKey] = (pMap[pKey] || 0) + amt;
+                sMap[sName] = (sMap[sName] || 0) + amt;
+            });
+
+            // Top Store KPI
+            let topStr = '--', topVal = 0;
+            Object.entries(sMap).forEach(([k, v]) => { if (v > topVal) { topVal = v; topStr = k; } });
+            const topPct = totSls > 0 ? (topVal / totSls) * 100 : 0;
+            document.getElementById('kpi-top-branch').textContent = topStr;
+            document.getElementById('kpi-top-peso').textContent = `${topPct.toFixed(1)}% peso total`;
+
+            // Charts Defaults for clean un-stretched look
+            Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
+            Chart.defaults.maintainAspectRatio = false;
+
+            // Trend
+            if (charts.t) charts.t.destroy();
+            const tx = Object.keys(tMap).sort();
+            const monthNames = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+            charts.t = new Chart(document.getElementById('chart-trend'), {
+                type: 'line',
+                data: {
+                    labels: tx.map(x => {
+                        if (isYtd) {
+                            const mi = parseInt(x.split('-')[1]) - 1;
+                            return monthNames[mi] || x.split('-')[1];
+                        }
+                        return x.split('-')[2];
+                    }),
+                    datasets: [{
+                        label: 'Ventas USD',
+                        data: tx.map(x => tMap[x]),
+                        borderColor: '#0284c7', backgroundColor: 'rgba(2, 132, 199, 0.1)',
+                        fill: true, tension: 0.4, pointRadius: 3
+                    }]
+                },
+                options: {
+                    plugins: { legend: { display: false } },
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function (value) { return '$' + value.toLocaleString(); }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Pay Mix
+            if (charts.p) charts.p.destroy();
+            const payLabels = Object.keys(pMap);
+            const payValues = Object.values(pMap);
+            const payTotal = payValues.reduce((a, b) => a + b, 0);
+            const payColors = ['#0284c7', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#cbd5e1', '#0f766e', '#1e40af', '#334155', '#be123c', '#6d28d9', '#475569', '#f97316', '#14b8a6', '#a855f7'];
+            charts.p = new Chart(document.getElementById('chart-pay'), {
+                type: 'doughnut',
+                data: {
+                    labels: payLabels,
+                    datasets: [{
+                        data: payValues,
+                        backgroundColor: payColors.slice(0, payLabels.length)
+                    }]
+                },
+                options: {
+                    plugins: {
+                        legend: { position: 'right', labels: { boxWidth: 12, padding: 10, font: { size: 11 } } },
+                        tooltip: {
+                            callbacks: {
+                                label: function (ctx) {
+                                    const val = ctx.parsed;
+                                    const pct = payTotal > 0 ? ((val / payTotal) * 100).toFixed(1) : '0.0';
+                                    return ` ${ctx.label}: $${val.toLocaleString()} (${pct}%)`;
+                                }
+                            }
+                        }
+                    },
+                    cutout: '70%',
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+
+            // Top 15 Bar
+            if (charts.b15) charts.b15.destroy();
+            const top15Arr = Object.entries(sMap).sort((a, b) => b[1] - a[1]).slice(0, 15);
+            charts.b15 = new Chart(document.getElementById('chart-top15'), {
+                type: 'bar',
+                data: {
+                    labels: top15Arr.map(x => x[0]),
+                    datasets: [{
+                        data: top15Arr.map(x => x[1]),
+                        backgroundColor: '#10b981',
+                        borderRadius: 6,
+                        barThickness: 16
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function (ctx) {
+                                    const val = ctx.parsed.x;
+                                    const pct = totSls > 0 ? ((val / totSls) * 100).toFixed(1) : '0.0';
+                                    return ` $${val.toLocaleString()} (${pct}% del total)`;
+                                }
+                            }
+                        }
+                    },
+                    scales: { x: { display: true, ticks: { callback: function (value) { return '$' + value.toLocaleString(); } } }, y: { grid: { display: false } } },
+                    responsive: true, maintainAspectRatio: false
+                }
+            });
+        }
+
+        function buildTable(data, y, m, c, b, isYtd) {
+            const tb = document.querySelector('#table-ppto tbody');
+            tb.innerHTML = '';
+
+            // Country name -> rate lookup
+            const COUNTRY_RATES = {};
+            if (raw.rates) {
+                const nameToCode = {
+                    'GUATEMALA': 'GT', 'PANAMA': 'PA', 'EL SALVADOR': 'SV',
+                    'COSTA RICA': 'CR', 'HONDURAS': 'HN', 'NICARAGUA': 'NI',
+                    'REP DOMINICANA': 'RD', 'URUGUAY': 'UY', 'COLOMBIA': 'CO'
+                };
+                Object.entries(nameToCode).forEach(([name, code]) => {
+                    COUNTRY_RATES[name] = raw.rates[code] || 1;
+                });
+            }
+
+            const grp = {};
+            data.forEach(t => {
+                if (t[10] === 0) return;
+                const k = t[1] + '|' + t[2];
+                if (!grp[k]) grp[k] = { s: 0, p: 0, local: 0, rate: 1 };
+                grp[k].s += t[7];
+                grp[k].local += (t[15] || 0);
+                grp[k].rate = t[8] || 1;
+            });
+
+            raw.ppto.forEach(p => {
+                if (!p.periodo.startsWith(y)) return;
+                if (!isYtd && p.periodo.split('-')[1] !== m) return;
+                if (c !== 'ALL' && p.pais !== c) return;
+                if (b !== 'ALL' && p.brand !== b) return;
+
+                const k = p.pais + '|' + p.brand;
+                if (!grp[k]) grp[k] = { s: 0, p: 0, local: 0, rate: COUNTRY_RATES[p.pais] || 1 };
+                grp[k].p += p.usd;
+            });
+
+            const keys = Object.keys(grp).sort((k1, k2) => grp[k2].s - grp[k1].s);
+            if (keys.length === 0) { tb.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#64748b;">No hay datos para esta selección.</td></tr>`; return; }
+
+            let totLocal = 0, totUsd = 0, totPpto = 0;
+
+            keys.forEach(k => {
+                const v = grp[k];
+                if (v.s === 0 && v.p === 0) return;
+
+                const gap = v.s - v.p;
+                let gPct = 0;
+                if (v.p > 0) gPct = (gap / v.p) * 100;
+                else if (v.s > 0) gPct = 100;
+
+                const localFmt = v.local.toLocaleString('en-US', { maximumFractionDigits: 0 });
+                const rateTip = v.rate !== 1 ? `Tasa: 1 USD = ${v.rate} local` : 'Moneda: USD';
+
+                totLocal += v.local;
+                totUsd += v.s;
+                totPpto += v.p;
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="font-weight:700; color:var(--text-main);">${k.split('|')[0]}</td>
+                    <td>${k.split('|')[1]}</td>
+                    <td class="num" title="${rateTip}" style="cursor: help;">${localFmt}</td>
+                    <td class="num">${usd(v.s)}</td>
+                    <td class="num">${usd(v.p)}</td>
+                    <td class="num ${gap >= 0 ? 'gap-pos' : 'gap-neg'}">${gap >= 0 ? '+' : ''}${usd(gap)}</td>
+                    <td class="num"><span class="badge-trend ${gPct >= 0 ? 'badge-pos' : 'badge-neg'}">${gPct >= 0 ? '+' : ''}${gPct.toFixed(1)}%</span></td>
+                `;
+                tb.appendChild(tr);
+            });
+
+            // Total General row
+            const totGap = totUsd - totPpto;
+            const totGapPct = totPpto > 0 ? (totGap / totPpto) * 100 : (totUsd > 0 ? 100 : 0);
+            const trTotal = document.createElement('tr');
+            trTotal.style.background = '#f1f5f9';
+            trTotal.style.fontWeight = '800';
+            trTotal.innerHTML = `
+                <td style="font-weight:800; color:var(--text-main);">TOTAL GENERAL</td>
+                <td></td>
+                <td class="num">${totLocal.toLocaleString('en-US', { maximumFractionDigits: 0 })}</td>
+                <td class="num">${usd(totUsd)}</td>
+                <td class="num">${usd(totPpto)}</td>
+                <td class="num ${totGap >= 0 ? 'gap-pos' : 'gap-neg'}">${totGap >= 0 ? '+' : ''}${usd(totGap)}</td>
+                <td class="num"><span class="badge-trend ${totGapPct >= 0 ? 'badge-pos' : 'badge-neg'}">${totGapPct >= 0 ? '+' : ''}${totGapPct.toFixed(1)}%</span></td>
+            `;
+            tb.appendChild(trTotal);
+        }
+
+        function buildScorecard(curr, ly) {
+            const sg = document.getElementById('scorecard-grid');
+            sg.innerHTML = '';
+
+            const st = {};
+            curr.forEach(t => {
+                if (t[10] === 0) return;
+                if (!st[t[3]]) st[t[3]] = { usd: 0, moms: new Set(), ly_usd: 0 };
+                st[t[3]].usd += t[7];
+                st[t[3]].moms.add(t[5]);
+            });
+
+            ly.forEach(t => { if (t[10] === 1 && st[t[3]]) st[t[3]].ly_usd += t[7]; });
+
+            Object.entries(st).sort((a, b) => b[1].usd - a[1].usd).forEach(([n, v]) => {
+                const card = document.createElement('div');
+                card.className = 'score-card';
+
+                const growth = v.ly_usd > 0 ? ((v.usd - v.ly_usd) / v.ly_usd) * 100 : (v.usd > 0 ? 100 : 0);
+                const tkt = v.moms.size > 0 ? v.usd / v.moms.size : 0;
+
+                card.innerHTML = `
+                    <div class="score-card-title">
+                        <span>${n}</span>
+                        <span class="badge-trend ${growth >= 0 ? 'badge-pos' : 'badge-neg'}">${growth >= 0 ? '+' : ''}${growth.toFixed(1)}% YoY</span>
+                    </div>
+                    <div class="score-grid-stats">
+                        <div>Recaudado <span class="score-val">${usd(v.usd)}</span></div>
+                        <div>Aportó LY <span class="score-val" style="font-weight:600;">${usd(v.ly_usd)}</span></div>
+                        <div>Ticket Prom. <span class="score-val">${usd(tkt)}</span></div>
+                        <div>Tickets (Únicos) <span class="score-val">${v.moms.size}</span></div>
+                    </div>
+                `;
+                sg.appendChild(card);
+            });
+        }
+
+        window.onload = init;
+    </script>
+</body>
+
+</html>

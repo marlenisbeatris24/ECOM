@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análisis de Operaciones eCom | Dashboard Final</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg: #fdfdfd;
+            --card: #ffffff;
+            --accent: #0f172a;
+            --brand: #0284c7;
+            --text: #0f172a;
+            --muted: #64748b;
+            --pos: #059669;
+            --neg: #dc2626;
+            --border: #e2e8f0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            padding: 1.5rem;
+            min-height: 100vh;
+        }
+
+        .top-shelf {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid var(--accent);
+            padding-bottom: 1rem;
+        }
+
+        .top-shelf h1 {
+            font-size: 1.7rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: -0.01em;
+        }
+
+        .filter-bar {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            background: #fff;
+            padding: 1.25rem;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            flex-wrap: wrap;
+        }
+
+        .filter-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .filter-item label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .filter-bar select {
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: #fff;
+            color: var(--text);
+            font-size: 0.85rem;
+            min-width: 140px;
+            cursor: pointer;
+            outline: none;
+        }
+
+        .filter-bar select:hover {
+            border-color: var(--brand);
+        }
+
+        .filter-bar select:focus {
+            border-color: var(--brand);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--card);
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s;
+            position: relative;
+            min-height: 160px;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
+        }
+
+        .stat-card .icon {
+            font-size: 1.4rem;
+            color: var(--brand);
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            opacity: 0.4;
+        }
+
+        .stat-card .label {
+            font-size: 0.9rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            font-weight: 800;
+            margin-bottom: 0.6rem;
+            letter-spacing: 0.02em;
+        }
+
+        .stat-card .value {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: var(--text);
+            line-height: 1.1;
+        }
+
+        .stat-card .diff {
+            font-size: 0.8rem;
+            margin-top: 0.6rem;
+            font-weight: 700;
+        }
+
+        .diff.pos {
+            color: var(--pos);
+        }
+
+        .diff.neg {
+            color: var(--neg);
+        }
+
+        .layout-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .viz-box {
+            background: var(--card);
+            padding: 1.5rem;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            min-height: 400px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .viz-box h3 {
+            font-size: 0.95rem;
+            font-weight: 700;
+            margin-bottom: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .viz-box h3::before {
+            content: '';
+            display: block;
+            width: 4px;
+            height: 18px;
+            background: var(--brand);
+            border-radius: 2px;
+        }
+
+        .chart-container {
+            flex: 1;
+            position: relative;
+            min-height: 0;
+        }
+
+        .table-area {
+            background: var(--card);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+        }
+
+        .table-area h3 {
+            padding: 1rem 1.5rem;
+            font-size: 0.95rem;
+            background: #f8fafc;
+            border-bottom: 1px solid var(--border);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        th {
+            text-align: left;
+            padding: 0.8rem 1.5rem;
+            background: #f8fafc;
+            color: var(--muted);
+            text-transform: uppercase;
+            font-size: 0.7rem;
+            font-weight: 700;
+            border-bottom: 1px solid var(--border);
+        }
+
+        td {
+            padding: 0.8rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        tr:last-child td {
+            border: none;
+        }
+
+        tr:hover td {
+            background: #fcfcfc;
+        }
+
+        .badge {
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 700;
+        }
+
+        .badge.green {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .badge.red {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .back-nav {
+            position: fixed;
+            bottom: 1.5rem;
+            left: 1.5rem;
+            background: rgba(15, 23, 42, 0.08);
+            color: var(--accent);
+            padding: 0.6rem 1.4rem;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 0.75rem;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(15, 23, 42, 0.1);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .back-nav:hover {
+            background: var(--accent);
+            color: #fff;
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        @media (max-width: 1024px) {
+            .layout-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <a href="index.html" class="back-nav">
+        <span class="material-icons"
+            style="font-size: 1.1rem; vertical-align: middle; margin-right: 4px;">arrow_back</span>
+        Menu Principal
+    </a>
+
+    <div class="top-shelf">
+        <div>
+            <h1>Análisis de Operaciones eCom</h1>
+            <p style="color:var(--muted); font-size:0.85rem;">Métricas de Fullfilment, Ventas y Gestión Regional (USD)
+            </p>
+        </div>
+        <div id="v-last" style="font-size:0.75rem; color:var(--muted);">Cargando...</div>
+    </div>
+
+    <div class="filter-bar">
+        <div class="filter-item">
+            <label>Año</label>
+            <select id="s-year" onchange="render()"></select>
+        </div>
+        <div class="filter-item">
+            <label>Mes</label>
+            <select id="s-month" onchange="render()">
+                <option value="YTD">YTD (Acumulado Anual)</option>
+                <option value="01">Enero</option>
+                <option value="02">Febrero</option>
+                <option value="03">Marzo</option>
+                <option value="04">Abril</option>
+                <option value="05">Mayo</option>
+                <option value="06">Junio</option>
+                <option value="07">Julio</option>
+                <option value="08">Agosto</option>
+                <option value="09">Septiembre</option>
+                <option value="10">Octubre</option>
+                <option value="11">Noviembre</option>
+                <option value="12">Diciembre</option>
+            </select>
+        </div>
+        <div class="filter-item">
+            <label>País</label>
+            <select id="s-country" onchange="updateStores(); render()">
+                <option value="all">TODOS LOS PAÍSES</option>
+            </select>
+        </div>
+        <div class="filter-item">
+            <label>Cadena</label>
+            <select id="s-brand" onchange="updateStores(); render()">
+                <option value="all">TODAS LAS MARCAS</option>
+            </select>
+        </div>
+        <div class="filter-item">
+            <label>Almacén</label>
+            <select id="s-store" onchange="render()">
+                <option value="all">TODOS LOS ALMACENES</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <span class="material-icons icon">shopping_cart</span>
+            <div class="label">Órdenes Fulfilled</div>
+            <div id="k-orders" class="value">--</div>
+            <div id="k-rate" class="diff" style="color: var(--brand);">-- Ratio</div>
+            <div id="k-rate-diff" class="diff">-- YoY</div>
+        </div>
+        <div class="stat-card">
+            <span class="material-icons icon">monetization_on</span>
+            <div class="label">Ventas Netas</div>
+            <div id="k-sales" class="value">--</div>
+            <div id="k-sales-yoy" class="diff">-- YoY</div>
+            <div id="k-ppto" class="diff">--</div>
+        </div>
+        <div class="stat-card">
+            <span class="material-icons icon">confirmation_number</span>
+            <div class="label">Ticket Promedio</div>
+            <div id="k-ticket" class="value">--</div>
+            <div id="k-ticket-diff" class="diff">-- YoY</div>
+        </div>
+        <div class="stat-card">
+            <span class="material-icons icon">local_shipping</span>
+            <div class="label">Lead Time Entrega</div>
+            <div id="k-time" class="value">--</div>
+            <div id="k-time-diff" class="diff">-- YoY</div>
+        </div>
+        <div class="stat-card">
+            <span class="material-icons icon">inventory_2</span>
+            <div class="label">Cancelacion por Stock</div>
+            <div id="k-canc" class="value" style="font-size: 24px; color: #ef4444;">--</div>
+            <div id="k-stock-weight" class="diff" style="font-weight: 700;">--</div>
+            <div id="canc-breakdown" class="label"
+                style="text-align: center; opacity: 0.8; height: 60px; overflow-y: auto; color: #4b5563; font-size: 10px; margin-top: 10px; width: 100%;">
+            </div>
+            <div id="k-canc-diff" class="diff" style="font-size: 10px; opacity: 0.6;">-- YoY</div>
+        </div>
+    </div>
+
+    <div class="layout-row">
+        <div class="viz-box">
+            <h3>Tendencia Diaria (Ventas USD y Órdenes)</h3>
+            <div class="chart-container"><canvas id="c-trend"></canvas></div>
+        </div>
+        <div class="viz-box">
+            <h3 id="t-brands-title">Top 10 Marcas (Ventas USD)</h3>
+            <div class="chart-container"><canvas id="c-brands"></canvas></div>
+        </div>
+    </div>
+
+    <div class="layout-row">
+        <div class="viz-box">
+            <h3>Ventas por Ciudad (Top 10)</h3>
+            <div class="chart-container"><canvas id="c-city"></canvas></div>
+        </div>
+        <div class="viz-box">
+            <h3 id="t-ship-title">Tipo de Envío</h3>
+            <div class="chart-container"><canvas id="c-ship"></canvas></div>
+        </div>
+    </div>
+
+    <div class="layout-row">
+        <div class="viz-box">
+            <h3 id="t-gender-title">Ventas por Género</h3>
+            <div class="chart-container"><canvas id="c-gender"></canvas></div>
+        </div>
+        <div class="viz-box">
+            <h3 id="t-cat-title">Ventas por Tipo de Producto</h3>
+            <div class="chart-container"><canvas id="c-cat"></canvas></div>
+        </div>
+    </div>
+
+    <div class="table-area">
+        <h3>Cumplimiento de Presupuesto (Mes Seleccionado)</h3>
+        <div style="overflow-x:auto;">
+            <table id="t-budget">
+                <thead>
+                    <tr>
+                        <th>País - Marca</th>
+                        <th class="num">Real (Local)</th>
+                        <th class="num">Real (USD)</th>
+                        <th class="num">Ppto (USD)</th>
+                        <th class="num">Cumpl.</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="layout-row" style="grid-template-columns: 1fr 1fr;">
+        <div class="table-area">
+            <h3>Top 10 Rotación (Alta)</h3>
+            <table id="t-rot-high">
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Sku</th>
+                        <th class="num">Unidades</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <div class="table-area">
+            <h3>Top 10 Rotación (Baja)</h3>
+            <table id="t-rot-low">
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Sku</th>
+                        <th class="num">Unidades</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="layout-row" style="grid-template-columns: 1fr 1fr;">
+        <div class="table-area">
+            <h3>Transportistas (Performance)</h3>
+            <table id="t-carrier">
+                <thead>
+                    <tr>
+                        <th>Carrier</th>
+                        <th>Órdenes</th>
+                        <th>Venta USD</th>
+                        <th>Lead Time</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <div class="table-area">
+            <h3>Tiendas Críticas (72 Horas Pendientes)</h3>
+            <table id="t-crit">
+                <thead>
+                    <tr>
+                        <th>Tienda</th>
+                        <th>Órdenes</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let raw = null;
+        let charts = {};
+
+        const usd = v => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v);
+        const num2 = v => new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v);
+        const p100 = v => (v * 100).toFixed(1) + '%';
+
+        async function init() {
+            try {
+                const res = await fetch('operaciones_data.json?v=' + Date.now());
+                raw = await res.json();
+                document.getElementById('v-last').textContent = 'Actualización: ' + raw.last_update;
+
+                // Years from periods
+                const years = [...new Set(raw.filters.periods.map(p => p.split('-')[0]))].sort().reverse();
+                populate('s-year', years);
+
+                // Select most recent month/year
+                const latest = raw.filters.periods[0];
+                document.getElementById('s-year').value = latest.split('-')[0];
+                document.getElementById('s-month').value = latest.split('-')[1];
+
+                populate('s-country', raw.filters.countries, true);
+                populate('s-brand', raw.filters.brands, true);
+
+                updateStores(); // Initial population
+                render();
+            } catch (e) { document.body.innerHTML = '<h1>Error cargando datos: ' + e.message + '</h1>'; }
+        }
+
+        function updateStores() {
+            const country = document.getElementById('s-country').value;
+            const brand = document.getElementById('s-brand').value;
+            const storeEl = document.getElementById('s-store');
+
+            const stores = new Set();
+            raw.raw_orders.forEach(r => {
+                // r[1]: pais, r[2]: brand, r[3]: tienda
+                if (country !== 'all' && r[1] !== country) return;
+                if (brand !== 'all' && r[2] !== brand) return;
+                if (r[3]) stores.add(r[3]);
+            });
+
+            const current = storeEl.value;
+            populate('s-store', [...stores].sort(), true);
+            // Restore selection if still exists
+            if ([...stores].includes(current)) storeEl.value = current;
+            else storeEl.value = 'all';
+        }
+
+        function populate(id, list, all = false) {
+            const el = document.getElementById(id);
+            if (all) el.innerHTML = '<option value="all">Filtro Global</option>';
+            list.forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = v; el.appendChild(o); });
+        }
+
+        function render() {
+            const year = document.getElementById('s-year').value;
+            const month = document.getElementById('s-month').value;
+            const country = document.getElementById('s-country').value;
+            const brand = document.getElementById('s-brand').value;
+            const store = document.getElementById('s-store').value;
+
+            const now_ref = new Date(raw.last_update.replace(' ', 'T'));
+
+            // Variables for Aggregation
+            let s = 0, t_s = 0, d_s = 0, d_c = 0;
+            let s_ly = 0, t_s_ly = 0, d_s_ly = 0, d_c_ly = 0;
+            const set_total = new Set(), set_fulfilled = new Set(), set_cancelled = new Set();
+            const set_total_ly = new Set(), set_fulfilled_ly = new Set(), set_cancelled_ly = new Set();
+            const set_tkt = new Set(), set_tkt_ly = new Set();
+            let trend = {}, brands_d = {}, city_d = {}, gen_d = {}, type_d = {}, ship_d = {}, carr_d = {}, crit_d = {};
+            let prod_d = {}, motivos_curr = {}, motivos_ly = {};
+
+            const is_ytd = (month === 'YTD');
+            const year_ly = (parseInt(year) - 1).toString();
+
+            raw.raw_orders.forEach(r => {
+                const r_yr = r[0].split('-')[0];
+                const r_mo = r[0].split('-')[1];
+
+                if (country !== 'all' && country !== r[1]) return;
+                if (brand !== 'all' && brand !== r[2]) return;
+                if (store !== 'all' && store !== r[3]) return;
+
+                // Year Over Year / LY logic
+                let matches_ly = false;
+                if (is_ytd) {
+                    matches_ly = (r_yr === year_ly);
+                } else {
+                    matches_ly = (r_yr === year_ly && r_mo === month);
+                }
+
+                if (matches_ly) {
+                    set_total_ly.add(r[20]);
+                    if (r[16] === 0) s_ly += r[6];
+                    if (r[21] === 1) {
+                        set_fulfilled_ly.add(r[20]);
+                        if (r[6] > 0) { t_s_ly += r[6]; set_tkt_ly.add(r[22] || r[20]); }
+                        if (r[7] > 0) { d_s_ly += r[7]; d_c_ly += 1; }
+                    }
+                    if (r[16] === 1) {
+                        set_cancelled_ly.add(r[20]);
+                        const mot = r[8] || 'Rechazo / Abandono';
+                        if (!motivos_ly[mot]) motivos_ly[mot] = new Set();
+                        motivos_ly[mot].add(r[20]);
+                    }
+                }
+
+                // Current Selection logic
+                let matches_curr = false;
+                if (is_ytd) {
+                    matches_curr = (r_yr === year);
+                } else {
+                    matches_curr = (r_yr === year && r_mo === month);
+                }
+
+                if (!matches_curr) return;
+
+                // [5: f_bool, 6: total_usd, 7: days, 16: canc_bool]
+                // Unique Order Count (r[20] is ref)
+                set_total.add(r[20]);
+
+                // ALL KPIs use is_fulfilled_v2 (r[21] === 1)
+                // This excludes Cancelled and Pending Payment verified
+                if (r[21] === 1) {
+                    s += r[6];
+                    set_fulfilled.add(r[20]);
+
+                    // Ticket Promedio components
+                    if (r[6] > 0) { t_s += r[6]; set_tkt.add(r[22] || r[20]); }
+
+                    // Lead Time components
+                    if (r[7] > 0) { d_s += r[7]; d_c += 1; }
+
+                    // Aggregations for charts/tables
+                    let tk = is_ytd ? r[0] : r[4].slice(0, 10);
+                    trend[tk] = trend[tk] || { sales: 0, orders: 0 };
+                    trend[tk].sales += r[6];
+                    trend[tk].orders += 1;
+
+                    brands_d[r[9]] = brands_d[r[9]] || { sales: 0, units: 0 };
+                    brands_d[r[9]].sales += r[6];
+                    brands_d[r[9]].units += (r[19] || 0);
+
+                    city_d[r[12]] = city_d[r[12]] || { sales: 0, orders: 0 };
+                    city_d[r[12]].sales += r[6];
+                    city_d[r[12]].orders += 1;
+
+                    // Gender
+                    let raw_gen = (r[10] || '').toString().toUpperCase().trim();
+                    let normalized_gen = 'SIN GÉNERO';
+                    if (['MASCULINO', 'HOMBRE'].includes(raw_gen)) normalized_gen = 'HOMBRE';
+                    else if (['FEMENINO', 'MUJER'].includes(raw_gen)) normalized_gen = 'MUJER';
+                    else if (['NIÑO', 'NIÑA', 'NIÑOS', 'NIÑAS'].includes(raw_gen)) normalized_gen = 'NIÑOS';
+                    else if (raw_gen === 'UNISEX') normalized_gen = 'UNISEX';
+                    gen_d[normalized_gen] = gen_d[normalized_gen] || { sales: 0, units: 0 };
+                    gen_d[normalized_gen].sales += r[6];
+                    gen_d[normalized_gen].units += (r[19] || 0);
+
+                    type_d[r[11]] = type_d[r[11]] || { sales: 0, units: 0 };
+                    type_d[r[11]].sales += r[6];
+                    type_d[r[11]].units += (r[19] || 0);
+
+                    // Shipping Type
+                    let raw_tienda = (r[18] || '').toString().toUpperCase().trim();
+                    let ship_type = 'RETIRO EN TIENDA';
+                    if (raw_tienda.includes('ENVÍO DOMICILIO') || raw_tienda.includes('ENVIO DOMICILIO')) {
+                        ship_type = 'ENVÍO A DOMICILIO';
+                    }
+                    ship_d[ship_type] = ship_d[ship_type] || { sales: 0, orders: 0 };
+                    ship_d[ship_type].sales += r[6];
+                    ship_d[ship_type].orders += 1;
+
+                    let pk = r[13] + '|' + r[14];
+                    prod_d[pk] = (prod_d[pk] || 0) + (r[19] || 1);
+
+                    carr_d[r[15]] = carr_d[r[15]] || { sales: 0, orders: 0, days_sum: 0, days_count: 0 };
+                    carr_d[r[15]].sales += r[6];
+                    carr_d[r[15]].orders += 1;
+                    if (r[7] > 0) { carr_d[r[15]].days_sum += r[7]; carr_d[r[15]].days_count += 1; }
+                }
+
+                // ORDERS FULFILLED (Strict states)
+                if (r[21] === 1) {
+                    set_fulfilled.add(r[20]);
+                }
+                if (r[16] === 1) {
+                    set_cancelled.add(r[20]);
+                    const mot = r[8] || 'Rechazo / Abandono';
+                    if (!motivos_curr[mot]) motivos_curr[mot] = new Set();
+                    motivos_curr[mot].add(r[20]);
+                }
+
+                // Critical Stores: Pending Payment > 72 hours
+                if (r[17] === 1) {
+                    const order_dt = new Date(r[4].replace(' ', 'T'));
+                    const diff_hours = (now_ref - order_dt) / (1000 * 3600);
+                    if (diff_hours >= 72) {
+                        crit_d[r[3]] = (crit_d[r[3]] || 0) + 1;
+                    }
+                }
+            });
+
+            // Budget Match
+            let p_usd = 0;
+            raw.ppto.forEach(p => {
+                const p_yr = p.periodo.split('-')[0];
+                const p_mo = p.periodo.split('-')[1];
+                if (p_yr !== year) return;
+                if (!is_ytd && p_mo !== month) return;
+
+                if (country !== 'all' && p.pais !== country) return;
+                if (brand !== 'all' && p.brand !== brand) return;
+                p_usd += p.usd;
+            });
+
+            const pdiff = (a, b) => {
+                if (b <= 0) return 'N/A';
+                const p = (a - b) / b;
+                return (p >= 0 ? '+' : '') + p100(p) + ' vs Año Anterior';
+            };
+
+            const stockMot = "Cancelación total por stock (avería/falta de producto)";
+            const cStock = motivos_curr[stockMot] ? motivos_curr[stockMot].size : 0;
+            const cStockLy = motivos_ly[stockMot] ? motivos_ly[stockMot].size : 0;
+
+            const r_curr = (set_fulfilled.size + cStock) > 0 ? set_fulfilled.size / (set_fulfilled.size + cStock) : 0;
+            const r_ly = (set_fulfilled_ly.size + cStockLy) > 0 ? set_fulfilled_ly.size / (set_fulfilled_ly.size + cStockLy) : 0;
+
+            document.getElementById('k-orders').textContent = set_fulfilled.size.toLocaleString();
+            document.getElementById('k-rate').textContent = p100(r_curr) + ' Ratio';
+            document.getElementById('k-rate-diff').textContent = r_ly > 0 ? ((r_curr - r_ly >= 0 ? '+' : '') + p100(r_curr - r_ly) + ' vs Año Anterior') : 'N/A';
+            document.getElementById('k-rate-diff').className = 'diff ' + (r_curr >= r_ly ? 'pos' : 'neg');
+
+            document.getElementById('k-sales').textContent = usd(s);
+            document.getElementById('k-sales-yoy').textContent = pdiff(s, s_ly);
+            document.getElementById('k-sales-yoy').className = 'diff ' + (s >= s_ly ? 'pos' : 'neg');
+
+            const tkt_curr = set_tkt.size > 0 ? t_s / set_tkt.size : 0;
+            const tkt_ly = set_tkt_ly.size > 0 ? t_s_ly / set_tkt_ly.size : 0;
+            document.getElementById('k-ticket').textContent = usd(tkt_curr);
+            document.getElementById('k-ticket-diff').textContent = pdiff(tkt_curr, tkt_ly);
+            document.getElementById('k-ticket-diff').className = 'diff ' + (tkt_curr >= tkt_ly ? 'pos' : 'neg');
+
+            const time_curr = d_c > 0 ? d_s / d_c : 0;
+            const time_ly = d_c_ly > 0 ? d_s_ly / d_c_ly : 0;
+            document.getElementById('k-time').textContent = time_curr.toFixed(1) + ' d';
+            document.getElementById('k-time-diff').textContent = pdiff(time_curr, time_ly);
+            document.getElementById('k-time-diff').className = 'diff ' + (time_curr <= time_ly && time_curr > 0 ? 'pos' : 'neg');
+
+            document.getElementById('k-canc').textContent = cStock.toLocaleString();
+
+            let breakdownHTML = '';
+            Object.entries(motivos_curr).forEach(([m, set]) => {
+                if (m === stockMot) return;
+                breakdownHTML += `<div style="font-size: 9px; line-height: 1.1; margin-top: 2px;">• ${m}: ${set.size}</div>`;
+            });
+            document.getElementById('canc-breakdown').innerHTML = breakdownHTML;
+
+            const cFull = set_fulfilled.size;
+            const weight = (cStock + cFull) > 0 ? (cStock / (cStock + cFull)) * 100 : 0;
+            const elW = document.getElementById('k-stock-weight');
+            elW.textContent = weight.toFixed(2) + '% de Peso';
+            if (Math.abs(weight - 9.5) < 0.001) elW.style.color = '#f97316';
+            else if (weight < 9.5) elW.style.color = '#22c55e';
+            else elW.style.color = '#ef4444';
+
+            const totalCanc = set_cancelled.size;
+            const totalCancLy = set_cancelled_ly.size;
+            document.getElementById('k-canc-diff').textContent = pdiff(totalCanc, totalCancLy);
+            document.getElementById('k-canc-diff').className = 'diff ' + (totalCanc <= totalCancLy ? 'pos' : 'neg');
+
+            const p_perc = p_usd > 0 ? (s / p_usd) : 0;
+            const kPpto = document.getElementById('k-ppto');
+            kPpto.textContent = p100(p_perc) + ' del Ppto';
+            kPpto.className = 'diff ' + (p_perc >= 1 ? 'pos' : (p_perc >= 0.8 ? 'muted' : 'neg'));
+
+            drawCharts(trend, brands_d, city_d, gen_d, type_d, ship_d, s, set_fulfilled.size, is_ytd);
+            drawTables(year, month, country, brand, store, s, prod_d, carr_d, crit_d, is_ytd);
+        }
+
+        function drawCharts(trend, brands_d, city_d, gen_d, type_d, ship_d, cur_sales, total_orders, is_ytd) {
+            // Global Typography Unification
+            Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
+            Chart.defaults.color = '#64748b';
+
+            // Trend
+            const trendCtx = document.getElementById('c-trend').getContext('2d');
+            if (charts.trend) charts.trend.destroy();
+            const tKeys = Object.keys(trend).sort();
+
+            // Labels: Month names if YTD, Days if Monthly
+            const monthNames = { "01": "Ene", "02": "Feb", "03": "Mar", "04": "Abr", "05": "May", "06": "Jun", "07": "Jul", "08": "Ago", "09": "Sep", "10": "Oct", "11": "Nov", "12": "Dic" };
+            const labels = tKeys.map(k => {
+                if (is_ytd) return monthNames[k.split('-')[1]] || k;
+                return k.split('-')[2];
+            });
+
+            charts.trend = new Chart(trendCtx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Ventas USD', data: tKeys.map(k => trend[k].sales), borderColor: '#0284c7', yAxisID: 'y', tension: 0.4, fill: true, backgroundColor: 'rgba(2,132,199,0.05)' },
+                        { label: 'Órdenes', data: tKeys.map(k => trend[k].orders), borderColor: '#10b981', yAxisID: 'y1', tension: 0.4 }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    scales: {
+                        y: { position: 'left', ticks: { callback: function (value) { return usd(value); } } },
+                        y1: { position: 'right', grid: { display: false } }
+                    },
+                    plugins: { tooltip: { callbacks: { label: function (ctx) { if (ctx.dataset.label === 'Ventas USD') return 'Ventas USD: ' + usd(ctx.raw); return 'Órdenes: ' + ctx.raw; } } } }
+                }
+            });
+
+            // Brands (Top 9 + OTROS)
+            const brandCtx = document.getElementById('c-brands').getContext('2d');
+            if (charts.brand) charts.brand.destroy();
+
+            let entries = Object.entries(brands_d).sort((a, b) => b[1].sales - a[1].sales);
+            let b_sorted = entries.slice(0, 9).map(x => [x[0], x[1].sales, x[1].units]);
+
+            if (entries.length > 9) {
+                let others_sales = entries.slice(9).reduce((acc, curr) => acc + curr[1].sales, 0);
+                let others_units = entries.slice(9).reduce((acc, curr) => acc + curr[1].units, 0);
+                b_sorted.push(['OTROS', others_sales, others_units]);
+            }
+
+            document.getElementById('t-brands-title').innerHTML = `Top 10 Marcas <span style="font-size:0.8rem; color:var(--muted); font-weight:500; margin-left:auto;">(${usd(cur_sales)})</span>`;
+            document.getElementById('t-gender-title').innerHTML = `Ventas por Género <span style="font-size:0.8rem; color:var(--muted); font-weight:500; margin-left:auto;">(${usd(cur_sales)})</span>`;
+            document.getElementById('t-cat-title').innerHTML = `Ventas por Tipo de Producto <span style="font-size:0.8rem; color:var(--muted); font-weight:500; margin-left:auto;">(${usd(cur_sales)})</span>`;
+
+            charts.brand = new Chart(brandCtx, {
+                type: 'doughnut',
+                data: { labels: b_sorted.map(x => x[0]), datasets: [{ data: b_sorted.map(x => x[1]), backgroundColor: ['#0284c7', '#0ea5e9', '#38bdf8', '#7dd3fc', '#bae6fd', '#059669', '#10b981', '#34d399', '#6ee7b7', '#94a3b8'] }] },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right' },
+                        tooltip: {
+                            callbacks: {
+                                label: function (ctx) {
+                                    const item = b_sorted[ctx.dataIndex];
+                                    const v = item[1];
+                                    const u = item[2];
+                                    let p = cur_sales > 0 ? (v / cur_sales) * 100 : 0;
+                                    return `${ctx.label}: ${usd(v)} (${p.toFixed(1)}%) | Unidades: ${u}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Cities (Top 10)
+            const cityCtx = document.getElementById('c-city').getContext('2d');
+            if (charts.city) charts.city.destroy();
+            let c_sorted = Object.entries(city_d).sort((a, b) => b[1].sales - a[1].sales).slice(0, 10);
+            charts.city = new Chart(cityCtx, {
+                type: 'bar',
+                data: { labels: c_sorted.map(x => x[0]), datasets: [{ label: 'Ventas USD', data: c_sorted.map(x => x[1].sales), backgroundColor: '#0284c7' }] },
+                options: {
+                    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                    scales: { x: { ticks: { callback: function (value) { return usd(value); } } } },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function (ctx) {
+                                    const val = c_sorted[ctx.dataIndex][1];
+                                    return `Ventas USD: ${usd(val.sales)} | Órdenes: ${val.orders}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Gender (Doughnut)
+            const genCtx = document.getElementById('c-gender').getContext('2d');
+            if (charts.gender) charts.gender.destroy();
+            let g_entries = Object.entries(gen_d).sort((a, b) => b[1].sales - a[1].sales);
+            charts.gender = new Chart(genCtx, {
+                type: 'doughnut',
+                data: { labels: g_entries.map(x => x[0]), datasets: [{ data: g_entries.map(x => x[1].sales), backgroundColor: ['#0284c7', '#10b981', '#f59e0b', '#6366f1', '#64748b'] }] },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right' },
+                        tooltip: {
+                            callbacks: {
+                                label: function (ctx) {
+                                    const item = g_entries[ctx.dataIndex][1];
+                                    const v = item.sales;
+                                    const u = item.units;
+                                    let p = cur_sales > 0 ? (v / cur_sales) * 100 : 0;
+                                    return `${ctx.label}: ${usd(v)} (${p.toFixed(1)}%) | Unidades: ${u}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Product Category (Horizontal Bar)
+            const catCtx = document.getElementById('c-cat').getContext('2d');
+            if (charts.category) charts.category.destroy();
+            let c_entries = Object.entries(type_d).sort((a, b) => b[1].sales - a[1].sales);
+            charts.category = new Chart(catCtx, {
+                type: 'bar',
+                data: { labels: c_entries.map(x => x[0]), datasets: [{ label: 'Ventas USD', data: c_entries.map(x => x[1].sales), backgroundColor: '#0284c7' }] },
+                options: {
+                    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function (ctx) {
+                                    const item = c_entries[ctx.dataIndex][1];
+                                    const v = item.sales;
+                                    const u = item.units;
+                                    let p = cur_sales > 0 ? (v / cur_sales) * 100 : 0;
+                                    return `${usd(v)} (${p.toFixed(1)}%) | Unidades: ${u}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: { x: { ticks: { callback: v => usd(v) } } }
+                }
+            });
+
+            // Shipping Type (Doughnut)
+            document.getElementById('t-ship-title').innerHTML = `Tipo de Envío <span style="font-size:0.8rem; color:var(--muted); font-weight:500; margin-left:auto;">(${usd(cur_sales)} | ${total_orders} Ord.)</span>`;
+            const shipCtx = document.getElementById('c-ship').getContext('2d');
+            if (charts.ship) charts.ship.destroy();
+
+            let s_entries = Object.entries(ship_d).sort((a, b) => b[1].sales - a[1].sales);
+            charts.ship = new Chart(shipCtx, {
+                type: 'doughnut',
+                data: { labels: s_entries.map(x => x[0]), datasets: [{ data: s_entries.map(x => x[1].sales), backgroundColor: ['#0284c7', '#34d399'] }] },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right' },
+                        tooltip: {
+                            callbacks: {
+                                label: function (ctx) {
+                                    const rawKey = ctx.label;
+                                    const val = ship_d[rawKey];
+                                    let p = cur_sales > 0 ? (val.sales / cur_sales) * 100 : 0;
+                                    return `${rawKey}: ${usd(val.sales)} (${p.toFixed(1)}%) | Órdenes: ${val.orders}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function drawTables(year, month, co, br, st, cur_sales, prod_d, carr_d, crit_d, is_ytd) {
+            // Budget
+            const tb = document.querySelector('#t-budget tbody');
+            tb.innerHTML = '';
+
+            // Build groups from PPTO ONLY
+            const groups = {};
+            raw.ppto.forEach(p => {
+                const p_yr = p.periodo.split('-')[0];
+                const p_mo = p.periodo.split('-')[1];
+                if (p_yr !== year) return;
+                if (!is_ytd && p_mo !== month) return;
+
+                if (co !== 'all' && p.pais !== co) return;
+                if (br !== 'all' && p.brand !== br) return;
+                const key = `${p.pais} - ${p.brand}`;
+                if (!groups[key]) groups[key] = { r_u: 0, p_u: 0 };
+                groups[key].p_u += p.usd;
+            });
+
+            // Sum Real Sales independently by same rules
+            raw.raw_orders.forEach(r => {
+                const r_yr = r[0].split('-')[0];
+                const r_mo = r[0].split('-')[1];
+                if (r_yr !== year || r[21] !== 1) return;
+                if (!is_ytd && r_mo !== month) return;
+
+                if (co !== 'all' && r[1] !== co) return;
+                if (br !== 'all' && r[2] !== br) return;
+                if (st !== 'all' && r[3] !== st) return;
+                const key = `${r[1]} - ${r[2]}`;
+                if (groups[key]) {
+                    groups[key].r_u += r[6];
+                }
+            });
+
+
+            let totRealLocal = 0, totRealUSD = 0, totPptoUSD = 0;
+            const sorted = Object.entries(groups).sort((a, b) => b[1].r_u - a[1].r_u);
+            sorted.forEach(([k, v]) => {
+                const tr = document.createElement('tr');
+                const c = v.p_u > 0 ? (v.r_u / v.p_u) * 100 : 0;
+
+                // Local Currency Calculation
+                const countryPart = k.split(' - ')[0];
+                const code = raw.name_to_code[countryPart] || 'PA';
+                const rate = raw.rates[code] || 1.0;
+                const realLocal = v.r_u * rate;
+
+                totRealLocal += realLocal;
+                totRealUSD += v.r_u;
+                totPptoUSD += v.p_u;
+
+                tr.innerHTML = `
+                    <td><b>${k}</b></td>
+                    <td class="num" title="Tasa: ${rate}">${realLocal.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
+                    <td class="num">${usd(v.r_u)}</td>
+                    <td class="num">${usd(v.p_u)}</td>
+                    <td class="num"><span class="badge ${c >= 90 ? 'green' : 'red'}">${c.toFixed(1)}%</span></td>
+                `;
+                tb.appendChild(tr);
+            });
+
+            // Add Total Row
+            const totC = totPptoUSD > 0 ? (totRealUSD / totPptoUSD) * 100 : 0;
+            const trTot = document.createElement('tr');
+            trTot.style.background = '#f8fafc';
+            trTot.style.fontWeight = '800';
+            trTot.innerHTML = `
+                <td>TOTAL</td>
+                <td class="num">${totRealLocal.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
+                <td class="num">${usd(totRealUSD)}</td>
+                <td class="num">${usd(totPptoUSD)}</td>
+                <td class="num"><span class="badge ${totC >= 90 ? 'green' : 'red'}">${totC.toFixed(1)}%</span></td>
+            `;
+            tb.appendChild(trTot);
+
+            // Rotation
+            let p_arr = Object.entries(prod_d).sort((a, b) => b[1] - a[1]);
+            fillRot('t-rot-high', p_arr.slice(0, 10));
+            fillRot('t-rot-low', [...p_arr].reverse().slice(0, 10));
+
+            // Carriers
+            const tbc = document.querySelector('#t-carrier tbody');
+            tbc.innerHTML = '';
+            Object.entries(carr_d).forEach(([n, d]) => {
+                const tr = document.createElement('tr');
+                let avg = d.days_count > 0 ? d.days_sum / d.days_count : 0;
+                tr.innerHTML = `<td>${n}</td><td>${d.orders.toLocaleString()}</td><td>${usd(d.sales)}</td><td>${avg.toFixed(1)} d</td>`;
+                tbc.appendChild(tr);
+            });
+
+            // Crit
+            const tc = document.querySelector('#t-crit tbody');
+            tc.innerHTML = '';
+            Object.entries(crit_d).sort((a, b) => b[1] - a[1]).slice(0, 15).forEach(([n, c]) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${n}</td><td>${c}</td><td><span class="badge red">🔥 ALERTA >72H</span></td>`;
+                tc.appendChild(tr);
+            });
+        }
+
+        function fillRot(id, list) {
+            const tb = document.querySelector(`#${id} tbody`);
+            tb.innerHTML = '';
+            list.forEach(([key, val]) => {
+                const [sku, name] = key.split('|');
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${name}</td><td><code style="font-size:10px;">${sku}</code></td><td><b>${val}</b></td>`;
+                tb.appendChild(tr);
+            });
+        }
+
+
+        window.onload = init;
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Informe Gerencial Marlenis (V5.5 Optimized)</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #0f172a;
+            --secondary: #64748b;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+            --bg: #f8fafc;
+            --card: #ffffff;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: var(--bg);
+            margin: 0;
+            padding: 24px;
+            color: #1e293b;
+            line-height: 1.5;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #0f172a, #1e293b);
+            color: white;
+            padding: 30px;
+            border-radius: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .filters {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            background: white;
+            padding: 24px;
+            border-radius: 16px;
+            margin-bottom: 24px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .f-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        label {
+            font-size: 0.75rem;
+            font-weight: 800;
+            color: var(--secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        select {
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            font-size: 0.9rem;
+            cursor: pointer;
+            background-color: #fff;
+            width: 100%;
+            transition: border-color 0.2s;
+        }
+
+        select:focus {
+            border-color: var(--info);
+            outline: none;
+        }
+
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .card {
+            background: white;
+            padding: 24px;
+            border-radius: 20px;
+            border: 1px solid #f1f5f9;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+
+        .m-lbl {
+            font-size: 0.8rem;
+            font-weight: 850;
+            color: var(--primary);
+            text-transform: uppercase;
+            margin-bottom: 4px;
+            display: block;
+        }
+
+        .m-val {
+            font-size: 2rem;
+            font-weight: 800;
+            margin: 10px 0;
+            color: var(--primary);
+        }
+
+        .m-sub {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            border-top: 1px solid #f1f5f9;
+            padding-top: 12px;
+            margin-top: 10px;
+        }
+
+        .m-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem;
+        }
+
+        .pill {
+            padding: 3px 12px;
+            border-radius: 99px;
+            font-weight: 700;
+            font-size: 0.75rem;
+        }
+
+        .up {
+            background: #dcfce7;
+            color: #15803d;
+        }
+
+        .down {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+
+        .positive {
+            color: #10b981;
+            font-weight: 800;
+        }
+
+        .negative {
+            color: #ef4444;
+            font-weight: 800;
+        }
+
+        .warning {
+            color: #f59e0b;
+            font-weight: 800;
+        }
+
+        .table-box {
+            background: white;
+            border-radius: 24px;
+            padding: 30px;
+            border: 1px solid #f1f5f9;
+            overflow-x: auto;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+
+        table {
+            width: 100%;
+            min-width: 900px;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        th {
+            text-align: left;
+            padding: 15px;
+            border-bottom: 2px solid #f1f5f9;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: var(--secondary);
+            font-weight: 800;
+        }
+
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #f8fafc;
+            font-size: 0.9rem;
+        }
+
+        tr.total td {
+            font-weight: 800;
+            background: #f8fafc;
+            color: var(--primary);
+            border-top: 1px solid #edf2f7;
+        }
+
+        .weight {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .visuals-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .visuals-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        .chart-card {
+            background: white;
+            padding: 30px;
+            border-radius: 24px;
+            border: 1px solid #f1f5f9;
+            height: 550px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+
+        .chart-card h2 {
+            font-size: 1.2rem;
+            font-weight: 850;
+            color: var(--primary);
+            margin: 0 0 25px 0;
+            border-left: 5px solid var(--info);
+            padding-left: 15px;
+        }
+
+        .wide-card {
+            height: 450px;
+        }
+
+        @media (max-width: 1200px) {
+            .visuals-row {
+                grid-template-columns: 1fr;
+            }
+
+            .chart-card {
+                height: 450px;
+            }
+        }
+
+        @media (max-width: 640px) {
+            body {
+                padding: 15px;
+            }
+
+            .m-val {
+                font-size: 1.6rem;
+            }
+
+            .metrics {
+                grid-template-columns: 1fr;
+            }
+
+            .table-box {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="header">
+        <div>
+            <h1 style="margin:0; font-size: 1.8rem; letter-spacing:-0.01em;">P&L Gerencial Final (Optimizado)</h1>
+            <p style="margin:4px 0 0; opacity: 0.8; font-size: 0.9rem;">Periodo Consolidado YTD | Actualización: <span
+                    id="v-periodo">Mar 2026</span></p>
+        </div>
+        <div class="pill up"
+            style="background: rgba(255,255,255,0.15); color: white; padding: 10px 25px; font-size:0.9rem;">Integridad
+            de Datos Verificada</div>
+    </div>
+
+    <!-- Botón flotante volver al menú -->
+    <a href="index.html" title="Volver al Menú Principal" style="
+        position: fixed; bottom: 28px; left: 28px; z-index: 9999;
+        display: flex; align-items: center; gap: 8px;
+        background: rgba(15,23,42,0.55); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+        color: #e2e8f0; text-decoration: none;
+        padding: 10px 18px; border-radius: 50px;
+        font-size: 0.82rem; font-weight: 600; letter-spacing: 0.02em;
+        border: 1px solid rgba(255,255,255,0.15);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+        transition: background 0.2s, transform 0.2s;
+    " onmouseover="this.style.background='rgba(15,23,42,0.82)';this.style.transform='translateY(-2px)'"
+        onmouseout="this.style.background='rgba(15,23,42,0.55)';this.style.transform='none'">&#8592; Menú Principal</a>
+
+    <div class="filters">
+        <div class="f-group"><label>Periodo de Tiempo</label><select id="s-period" onchange="run()">
+                <option value="ytd">Acumulado (YTD)</option>
+            </select></div>
+        <div class="f-group"><label>Mercado / País</label><select id="s-country" onchange="onC()">
+                <option value="all">Todos los Mercados</option>
+            </select></div>
+        <div class="f-group"><label>Cadena / Canal</label><select id="s-chain" onchange="run()">
+                <option value="all">Todas las Cadenas</option>
+            </select></div>
+    </div>
+
+    <div class="metrics">
+        <div class="card">
+            <span class="m-lbl">Ventas Netas (Inc Imp)</span>
+            <div id="v-vn" class="m-val">$0</div>
+            <div class="m-sub">
+                <div class="m-row"><span>Año Anterior:</span> <span id="y-vn" class="pill">0% vs Ant</span></div>
+                <div class="m-row">
+                    <span>Presupuesto Meta:</span>
+                    <div style="text-align:right;">
+                        <span id="goal-vn" style="font-weight:750;">$0</span>
+                        <span id="comp-vn" class="status-txt" style="margin-left:4px;">(0%)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <span class="m-lbl">EBITDA Gerencial</span>
+            <div id="v-eb" class="m-val">$0</div>
+            <div class="m-sub">
+                <div class="m-row"><span>Año Anterior:</span> <span id="y-eb" class="pill">0% vs Ant</span></div>
+                <div class="m-row">
+                    <span>Presupuesto Meta:</span>
+                    <div style="text-align:right;">
+                        <span id="goal-eb" style="font-weight:750;">$0</span>
+                        <span id="comp-eb" class="status-txt" style="margin-left:4px;">(0%)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <span class="m-lbl">Margen Bruto (%)</span>
+            <div id="v-mb" class="m-val">0%</div>
+            <div class="m-sub">
+                <div class="m-row"><span>Año Anterior:</span> <span id="y-mb" class="pill">0 pts vs Ant</span></div>
+                <div class="m-row">
+                    <span>Presupuesto Meta:</span>
+                    <div style="text-align:right;">
+                        <span id="goal-mb" style="font-weight:750;">0%</span>
+                        <span id="comp-mb" class="status-txt" style="margin-left:4px;">(0%)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card" style="display:flex; flex-direction:column; justify-content:center; min-height: 180px;">
+            <span class="m-lbl">Punto de Equilibrio (Sales)</span>
+            <div id="v-be" class="m-val" style="color:var(--info);">$0</div>
+            <div style="font-size:0.7rem; color:var(--secondary); font-weight:500;">Venta neta requerida para lograr
+                margen de contribución de equilibrio.</div>
+        </div>
+    </div>
+
+    <div class="table-box">
+        <h2 style="margin-bottom:25px; font-size:1.2rem; font-weight:850; color:var(--primary);">Detalle de Resultados
+            Operativos (P&L)</h2>
+        <table id="p-table">
+            <thead>
+                <tr>
+                    <th>Rubro del P&L Gerencial</th>
+                    <th>Actual (Real)</th>
+                    <th>% Peso</th>
+                    <th>Presupuesto</th>
+                    <th>Var %</th>
+                    <th>Año Ant</th>
+                    <th>YoY %</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <div class="visuals-stack">
+        <div class="chart-card wide-card">
+            <h2>Tendencia Histórica de Ventas (Mensual)</h2><canvas id="c-tr"></canvas>
+        </div>
+        <div class="visuals-row">
+            <div class="chart-card">
+                <h2>Análisis de Cascada de Ingresos</h2><canvas id="c-wf"></canvas>
+            </div>
+            <div class="chart-card">
+                <h2>Ejecución de Gastos (Real vs Meta)</h2><canvas id="c-exp"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let raw = null;
+        let MAX = 0;
+        let charts = {};
+        const cos = new Set(); 
+        const cm = {};
+        const months = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+
+        async function init() {
+            try {
+                const r = await fetch('resultados_data.json?v=' + Date.now());
+                if (!r.ok) throw new Error("No se pudo cargar resultados_data.json. Ejecuta el script Python y usa un servidor local.");
+                raw = await r.json();
+                MAX = raw.MAX;
+
+                // Configuración inicial de Países y Cadenas
+                Object.keys(raw.ventas_netas).forEach(k => {
+                    const p = k.trim().split(' '); let c, co;
+                    if (k.includes('LA CANCHA')) { c = 'LA CANCHA'; co = p.slice(2).join(' ') || 'URUGUAY'; }
+                    else { c = p[0]; co = p.slice(1).join(' ') || 'URUGUAY'; }
+                    cos.add(co); if (!cm[co]) cm[co] = new Set(); cm[co].add(c);
+                });
+                
+                const csel = document.getElementById('s-country');
+                Array.from(cos).sort().forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; csel.appendChild(o); });
+
+                // Poblar selector de periodos
+                const psel = document.getElementById('s-period');
+                for (let i = 1; i <= MAX; i++) {
+                    const o = document.createElement('option'); o.value = i; o.textContent = months[i - 1]; psel.appendChild(o);
+                }
+
+                run();
+            } catch (err) {
+                console.error(err);
+                document.body.innerHTML = `<div style="padding:50px; text-align:center; color:white; background:#1a1a1a; height:100vh;">
+                    <h2>⚠️ Error de Carga de Datos</h2>
+                    <p>${err.message}</p>
+                    <p style="font-size:0.9rem; color:#888;">Nota: Los navegadores bloquean archivos JSON si el HTML se abre directamente (doble clic). Usa Live Server o un servidor local.</p>
+                </div>`;
+            }
+        }
+
+        window.onload = init;
+
+        const cur = v => new Intl.NumberFormat('es-PA', { style: 'currency', currency: 'USD' }).format(v);
+        const p100 = v => (v * 100).toFixed(1) + '%';
+
+        const csel = document.getElementById('s-country');
+
+        function onC() {
+            const co = csel.value; const chs = document.getElementById('s-chain'); chs.innerHTML = '<option value="all">Todas las Cadenas</option>';
+            let list = (co === 'all') ? [] : Array.from(cm[co] || []);
+            if (co === 'all') { Object.values(cm).forEach(s => s.forEach(v => list.push(v))); list = Array.from(new Set(list)); }
+            list.sort().forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = v; chs.appendChild(o); });
+            run();
+        }
+
+        function getD(yr, co, ch, mo) {
+            let res = { vn: 0, vnx: 0, vp: 0, vpx: 0, vb: 0, vbp: 0, ca: 0, cap: 0, de: 0, dep: 0, mv: 0, me: 0, ap: 0, oh: 0, ad: 0, em: 0, en: 0, apP: 0, ohP: 0, adP: 0, emP: 0, enP: 0, ci: 0 };
+            let s = mo === 'ytd' ? 1 : parseInt(mo), e = mo === 'ytd' ? MAX : parseInt(mo);
+            Object.keys(raw.ventas_netas).forEach(k => {
+                const p = k.trim().split(' '); let c_k, co_k;
+                if (k.includes('LA CANCHA')) { c_k = 'LA CANCHA'; co_k = p.slice(2).join(' ') || 'URUGUAY'; }
+                else { c_k = p[0]; co_k = p.slice(1).join(' ') || 'URUGUAY'; }
+                if (co !== 'all' && co_k !== co) return; if (ch !== 'all' && c_k !== ch) return;
+                const tax = raw.tax_rates[co_k] || 0;
+                const sumF = (sh, f, y) => (raw[sh][k] || []).filter(m => m.year == y && m.month >= s && m.month <= e).reduce((a, b) => a + (b[f] || 0), 0);
+                const sumV = (sh, y) => (raw[sh][k] || []).filter(m => m.year == y && m.month >= s && m.month <= e).reduce((a, b) => a + (b.value || 0), 0);
+                const real = sumV('ventas_netas', yr); const ppto = sumV('ppto_ventas', yr);
+                res.vn += real; res.vnx += real / (1 + tax); res.vp += ppto; res.vpx += ppto / (1 + tax);
+                res.ca += sumF('cancelaciones', 'CANCELADO', yr); res.cap += sumF('cancelaciones', 'CANCEL_EST', yr);
+                res.de += sumF('descuentos', 'DESC_APLICADO', yr); res.dep += sumF('descuentos', 'DESC_EST', yr);
+                (raw.margen[k] || []).forEach((m, i) => {
+                    if (m.year == yr && m.month >= s && m.month <= e) {
+                        const vrx = ((raw.ventas_netas[k][i]?.value || 0) / (1 + tax));
+                        const vpx = (raw.ppto_ventas[k] && raw.ppto_ventas[k][i]?.year == yr && raw.ppto_ventas[k][i]?.month == m.month) ? (raw.ppto_ventas[k][i].value / (1 + tax)) : 0;
+                        res.mv += vrx * m.MARGEN_REAL; res.me += vpx * m.MARGEN_EST;
+                    }
+                });
+                res.ap += sumF('ap', 'AP_EJEC', yr); res.apP += sumF('ap', 'AP_PPTO', yr);
+                res.oh += sumF('overhead', 'OH_EJEC', yr); res.ohP += sumF('overhead', 'OH_PPTO', yr);
+                res.ad += sumF('admin', 'ADMIN_EJEC', yr); res.adP += sumF('admin', 'ADMIN_PPTO', yr);
+                res.em += sumF('empaque', 'EMP_EJEC', yr); res.emP += sumF('empaque', 'EMP_PPTO', yr);
+                res.en += sumF('costo_envio', 'ENV_EJEC', yr); res.enP += sumF('costo_envio', 'ENV_PPTO', yr);
+                res.ci += sumV('cobro_envio', yr);
+            });
+            res.vb = res.vn + res.ca + res.de; res.vbp = res.vp + res.cap + res.dep;
+            return res;
+        }
+
+        function run() {
+            const co = document.getElementById('s-country').value, ch = document.getElementById('s-chain').value, mo = document.getElementById('s-period').value;
+            const T = getD(2026, co, ch, mo), A = getD(2025, co, ch, mo);
+
+            const setK = (id, val, ppto, ant, isP = false) => {
+                document.getElementById('v-' + id).textContent = isP ? p100(val) : cur(val);
+                document.getElementById('goal-' + id).textContent = isP ? p100(ppto) : cur(ppto);
+                const yEl = document.getElementById('y-' + id);
+                if (isP) { const diff = (val - ant) * 100; yEl.textContent = (diff >= 0 ? '+' : '') + diff.toFixed(1) + ' pts vs Año Ant'; yEl.className = 'pill ' + (diff >= 0 ? 'up' : 'down'); }
+                else { const yoy = val / ant - 1; yEl.textContent = (yoy >= 0 ? '+' : '') + p100(yoy) + ' vs Año Ant'; yEl.className = 'pill ' + (yoy >= 0 ? 'up' : 'down'); }
+                const cEl = document.getElementById('comp-' + id);
+                const compliance = (ppto !== 0) ? (val / ppto) * 100 : 0;
+                cEl.textContent = "(" + compliance.toFixed(1) + "%)";
+                cEl.className = 'status-txt ' + (compliance >= 95 ? 'positive' : (compliance >= 85 ? 'warning' : 'negative'));
+            };
+
+            const gR = T.ap + T.oh + T.ad + T.em + T.en, ebR = T.mv - gR + T.ci;
+            const gP = T.apP + T.ohP + T.adP + T.emP + T.enP, ebP = T.me - gP;
+            const ebA = A.mv - (A.ap + A.oh + A.ad + A.em + A.en) + A.ci;
+            const mR = T.vnx > 0 ? T.mv / T.vnx : 0, mP = T.vpx > 0 ? T.me / T.vpx : 0, mA = A.vnx > 0 ? A.mv / A.vnx : 0;
+
+            setK('vn', T.vn, T.vp, A.vn);
+            setK('eb', ebR, ebP, ebA);
+            setK('mb', mR, mP, mA, true);
+            // Punto de Equilibrio: Gastos Fijos / Margen Bruto %
+            // BEP (Ventas Brutas) = Costos Fijos / (Margen Bruto / Ventas Sin Impuesto)
+            const gastosFijos = T.oh + T.ad + T.ap + T.em + T.en;
+            const margenPct = T.vnx > 0 ? T.mv / T.vnx : 0;
+            const bep = margenPct > 0 ? gastosFijos / margenPct : 0;
+            document.getElementById('v-be').textContent = cur(bep);
+
+            const rows = [
+                { l: 'VENTAS BRUTAS', r: T.vb, p: T.vbp, a: A.vb, b: 1 },
+                { l: '(-) Cancelaciones', r: T.ca, p: T.cap, a: A.ca },
+                { l: '(-) Devoluciones (Descuentos)', r: T.de, p: T.dep, a: A.de },
+                { l: '(=) VENTAS NETAS (INC IMP)', r: T.vn, p: T.vp, a: A.vn, b: 1 },
+                { l: '(=) VENTAS SIN IMPUESTOS', r: T.vnx, p: T.vpx, a: A.vnx, b: 1 },
+                { l: '(-) Costo de Venta', r: T.vnx - T.mv, p: T.vpx - T.me, a: A.vnx - A.mv },
+                { l: '(=) MARGEN BRUTO', r: T.mv, p: T.me, a: A.mv, b: 1 },
+                { l: 'Publicidad (A&P)', r: T.ap, p: T.apP, a: A.ap },
+                { l: 'Overhead Operativo', r: T.oh, p: T.ohP, a: A.oh },
+                { l: 'Gastos Administrativos', r: T.ad, p: T.adP, a: A.ad },
+                { l: 'Costo de Empaque', r: T.em, p: T.emP, a: A.em },
+                { l: 'Costo de Envío', r: T.en, p: T.enP, a: A.en },
+                { l: '(=) GASTOS OPERATIVOS', r: gR, p: gP, a: (A.ap + A.oh + A.ad + A.em + A.en), b: 1 },
+                { l: 'Otros Ingresos (Recupero Env)', r: T.ci, p: 0, a: A.ci },
+                { l: '(=) EBITDA', r: ebR, p: ebP, a: ebA, b: 1 }
+            ];
+            const tb = document.querySelector('#p-table tbody'); tb.innerHTML = '';
+            rows.forEach(r => {
+                const tr = document.createElement('tr'); if (r.b) tr.className = 'total';
+                // Peso: Margen Bruto y Costo de Venta -> base Ventas Sin Impuesto (T.vnx); resto -> Ventas Brutas (T.vb)
+                const isMargenCosto = r.l.toUpperCase().includes('MARGEN') || r.l.toUpperCase().includes('COSTO');
+                const pesoBase = (r.l.includes('VENTAS')) ? null : (isMargenCosto ? (T.vnx || 1) : (T.vb || 1));
+                const peso = (r.l.includes('VENTAS')) ? '-' : p100(r.r / pesoBase);
+                const vP = r.p ? (r.r / r.p - 1) : 0; const vA = r.a ? (r.r / r.a - 1) : 0;
+                const clP = vP >= 0 ? 'positive' : 'negative'; const clA = vA >= 0 ? 'positive' : 'negative';
+                tr.innerHTML = `<td>${r.l}</td><td>${cur(r.r)}</td><td class="weight">${peso}</td><td>${r.p ? cur(r.p) : '-'}</td><td class="${clP}">${r.p ? p100(vP) : '-'}</td><td>${r.a ? cur(r.a) : '-'}</td><td class="${clA}">${r.a ? p100(vA) : '-'}</td>`;
+                tb.appendChild(tr);
+            });
+            renderWF(T); renderExp(T); renderTr(2026, co, ch);
+        }
+
+        function renderWF(T) {
+            const ctx = document.getElementById('c-wf').getContext('2d'); if (charts.wf) charts.wf.destroy();
+            const labels = ['V. Netas', 'Costo V.', 'Gtos Op', 'O. Ing', 'EBITDA'];
+            const net = T.vn, cv = (T.vnx - T.mv), gO = (T.ap + T.oh + T.ad + T.em + T.en);
+            const data = [[0, net], [net, net - cv], [net - cv, net - cv - gO], [net - cv - gO, net - cv - gO + T.ci], [0, net - cv - gO + T.ci]];
+            charts.wf = new Chart(ctx, {
+                type: 'bar', data: { labels: labels, datasets: [{ label: 'Valor USD', data: data, backgroundColor: ['#0f172a', '#ef4444', '#ef4444', '#10b981', '#0f172a'], borderRadius: 8 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (i) => cur(i.raw[1] - i.raw[0]) } } }, scales: { y: { beginAtZero: true } } }
+            });
+        }
+
+        function renderExp(T) {
+            const ctx = document.getElementById('c-exp').getContext('2d'); if (charts.exp) charts.exp.destroy();
+            charts.exp = new Chart(ctx, {
+                type: 'bar', data: { labels: ['A&P', 'OH', 'Admin', 'Emp', 'Env'], datasets: [{ label: 'Ejecutado', data: [T.ap, T.oh, T.ad, T.em, T.en], backgroundColor: '#0f172a', borderRadius: 6 }, { label: 'Ppto', data: [T.apP, T.ohP, T.adP, T.emP, T.enP], backgroundColor: '#e2e8f0', borderRadius: 6 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { tooltip: { callbacks: { label: (i) => i.dataset.label + ': ' + cur(i.raw) } } } }
+            });
+        }
+
+        function renderTr(yr, co, ch) {
+            const ctx = document.getElementById('c-tr').getContext('2d'); if (charts.tr) charts.tr.destroy();
+            let m = Array(12).fill(0), a = Array(12).fill(0), p = Array(12).fill(0);
+            Object.keys(raw.ventas_netas).forEach(k => {
+                const parts = k.trim().split(' '); let c_k, co_k;
+                if (k.includes('LA CANCHA')) { c_k = 'LA CANCHA'; co_k = parts.slice(2).join(' ') || 'URUGUAY'; }
+                else { c_k = parts[0]; co_k = parts.slice(1).join(' ') || 'URUGUAY'; }
+                if (co !== 'all' && co_k !== co) return; if (ch !== 'all' && c_k !== ch) return;
+                raw.ventas_netas[k].forEach(v => { if (v.year == yr) m[v.month - 1] += v.value; if (v.year == yr - 1) a[v.month - 1] += v.value; });
+            });
+            // Presupuesto de ventas del año en curso
+            if (raw.ppto_ventas) {
+                Object.keys(raw.ppto_ventas).forEach(k => {
+                    const parts = k.trim().split(' '); let c_k, co_k;
+                    if (k.includes('LA CANCHA')) { c_k = 'LA CANCHA'; co_k = parts.slice(2).join(' ') || 'URUGUAY'; }
+                    else { c_k = parts[0]; co_k = parts.slice(1).join(' ') || 'URUGUAY'; }
+                    if (co !== 'all' && co_k !== co) return; if (ch !== 'all' && c_k !== ch) return;
+                    raw.ppto_ventas[k].forEach(v => { if (v.year == yr) p[v.month - 1] += v.value; });
+                });
+            }
+            charts.tr = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
+                    datasets: [
+                        { label: 'Real ' + yr, data: m, borderColor: '#0f172a', backgroundColor: 'rgba(15,23,42,0.07)', fill: true, tension: 0.4, borderWidth: 3, pointRadius: 4 },
+                        { label: 'Ppto ' + yr, data: p, borderColor: '#f59e0b', backgroundColor: 'transparent', borderDash: [6, 4], tension: 0.4, borderWidth: 2.5, pointRadius: 3, pointBackgroundColor: '#f59e0b' },
+                        { label: 'Real ' + (yr - 1), data: a, borderColor: '#94a3b8', backgroundColor: 'transparent', borderDash: [3, 3], tension: 0.4, borderWidth: 1.8, pointRadius: 2 }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: true, position: 'top', labels: { usePointStyle: true, pointStyleWidth: 14, font: { size: 12 }, color: '#334155' } },
+                        tooltip: { callbacks: { label: (i) => i.dataset.label + ': ' + cur(i.raw) } }
+                    },
+                    scales: { y: { ticks: { callback: (v) => cur(v) } } }
+                }
+            });
+        }
+
+        // init() se encarga de llamar a run() tras cargar el JSON
+    </script>
+</body>
+
+</html>
