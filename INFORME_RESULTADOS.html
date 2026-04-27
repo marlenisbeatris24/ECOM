@@ -403,28 +403,81 @@
         const cm = {};
         const months = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
 
+        async function initDuckDB() {
+            const duckdb = await import('https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@1.28.0/+esm');
+            const BUNDLES = duckdb.getJsDelivrBundles();
+            const bundle = await duckdb.selectBundle(BUNDLES);
+            const worker_url = URL.createObjectURL(
+                new Blob([`importScripts("${bundle.mainWorker}");`], { type: 'text/javascript' })
+            );
+            const worker = new Worker(worker_url);
+            const logger = new duckdb.ConsoleLogger();
+            const db = new duckdb.AsyncDuckDB(logger, worker);
+            await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
+            return db;
+        }
+
         async function init() {
             try {
-                const r = await fetch('resultados_data.json?v=' + Date.now());
-                if (!r.ok) throw new Error("No se pudo cargar resultados_data.json. Ejecuta el script Python y usa un servidor local.");
-                let raw_compressed = await r.json();
-                
-                // DECOMPRESSOR ENGINE
-                const dict = raw_compressed.__dict__ || [];
-                function decompress(data) {
-                    if (Array.isArray(data)) return data.map(decompress);
-                    if (data !== null && typeof data === 'object') {
-                        let res = {};
-                        for (let k in data) res[k] = decompress(data[k]);
-                        return res;
+                // ── Meta liviano: tax_rates, MAX, periodo_str ──
+                const metaRes = await fetch('resultados_meta.json?v=' + Date.now());
+                if (!metaRes.ok) throw new Error('No se encontró resultados_meta.json. Ejecuta el script Python.');
+                const meta = await metaRes.json();
+
+                // ── DuckDB ──
+                const db = await initDuckDB();
+                const conn = await db.connect();
+
+                const bufData = await (await fetch('resultados_data.parquet')).arrayBuffer();
+                await db.registerFileBuffer('resultados.parquet', new Uint8Array(bufData));
+
+                const res = await conn.query(`SELECT * FROM 'resultados.parquet'`);
+                const flatRows = res.toArray().map(r => r.toJSON());
+                await conn.close();
+
+                // ── Reconstruir árbol por cadena_key/year/month ──
+                // El código JS existente espera: raw.ventas_netas[key] = [{year, month, value}, ...]
+                // raw.cancelaciones[key] = [{year, month, CANCELADO, CANCEL_EST}, ...], etc.
+
+                const singleMetrics = [
+                    ['ventas_netas', 'ventas_netas'],
+                    ['ppto_ventas',  'ppto_ventas'],
+                    ['cobro_envio',  'cobro_envio']
+                ];
+                const pairMetrics = [
+                    ['cancelaciones', 'CANCELADO',    'CANCEL_EST'],
+                    ['descuentos',    'DESC_APLICADO','DESC_EST'],
+                    ['margen',        'MARGEN_REAL',  'MARGEN_EST'],
+                    ['ap',            'AP_EJEC',      'AP_PPTO'],
+                    ['overhead',      'OH_EJEC',      'OH_PPTO'],
+                    ['admin',         'ADMIN_EJEC',   'ADMIN_PPTO'],
+                    ['empaque',       'EMP_EJEC',     'EMP_PPTO'],
+                    ['costo_envio',   'ENV_EJEC',     'ENV_PPTO'],
+                ];
+
+                const tree = {};
+                for (const [treeKey] of [...singleMetrics, ...pairMetrics]) tree[treeKey] = {};
+
+                for (const row of flatRows) {
+                    const key = row.cadena_key;
+                    const yr  = Number(row.year);
+                    const mo  = Number(row.month);
+
+                    for (const [treeKey, col] of singleMetrics) {
+                        if (!tree[treeKey][key]) tree[treeKey][key] = [];
+                        tree[treeKey][key].push({ year: yr, month: mo, value: row[col] || 0 });
                     }
-                    if (typeof data === 'number' && Number.isInteger(data) && data < 0 && dict[-data - 1] !== undefined) {
-                        return dict[-data - 1];
+                    for (const [treeKey, col_r, col_p] of pairMetrics) {
+                        if (!tree[treeKey][key]) tree[treeKey][key] = [];
+                        const entry = { year: yr, month: mo };
+                        entry[col_r] = row[col_r] || 0;
+                        entry[col_p] = row[col_p] || 0;
+                        tree[treeKey][key].push(entry);
                     }
-                    return data;
                 }
-                raw = decompress(raw_compressed);
-                MAX = raw.MAX;
+
+                raw = { ...tree, tax_rates: meta.tax_rates };
+                MAX = meta.MAX;
 
                 // Configuración inicial de Países y Cadenas
                 Object.keys(raw.ventas_netas).forEach(k => {
@@ -433,7 +486,7 @@
                     else { c = p[0]; co = p.slice(1).join(' ') || 'URUGUAY'; }
                     cos.add(co); if (!cm[co]) cm[co] = new Set(); cm[co].add(c);
                 });
-                
+
                 const csel = document.getElementById('s-country');
                 Array.from(cos).sort().forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; csel.appendChild(o); });
 
@@ -449,7 +502,7 @@
                 document.body.innerHTML = `<div style="padding:50px; text-align:center; color:white; background:#1a1a1a; height:100vh;">
                     <h2>⚠️ Error de Carga de Datos</h2>
                     <p>${err.message}</p>
-                    <p style="font-size:0.9rem; color:#888;">Nota: Los navegadores bloquean archivos JSON si el HTML se abre directamente (doble clic). Usa Live Server o un servidor local.</p>
+                    <p style="font-size:0.9rem; color:#888;">Nota: Los archivos Parquet requieren un servidor local (Live Server / python -m http.server).</p>
                 </div>`;
             }
         }

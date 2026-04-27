@@ -517,19 +517,74 @@
         const num2 = v => new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v);
         const p100 = v => (v * 100).toFixed(1) + '%';
 
+        async function initDuckDB() {
+            const duckdb = await import('https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@1.28.0/+esm');
+            const BUNDLES = duckdb.getJsDelivrBundles();
+            const bundle = await duckdb.selectBundle(BUNDLES);
+            const worker_url = URL.createObjectURL(
+                new Blob([`importScripts("${bundle.mainWorker}");`], { type: 'text/javascript' })
+            );
+            const worker = new Worker(worker_url);
+            const logger = new duckdb.ConsoleLogger();
+            const db = new duckdb.AsyncDuckDB(logger, worker);
+            await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
+            return db;
+        }
+
         async function init() {
             try {
-                const res = await fetch('operaciones_data.json?v=' + Date.now());
-                let raw_compressed = await res.json();
-                
-                // DECOMPRESSOR ENGINE
-                const dict = raw_compressed.__dict__ || [];
-                if (dict.length > 0 && Array.isArray(raw_compressed.raw_orders)) {
-                    raw_compressed.raw_orders = raw_compressed.raw_orders.map(row => {
-                        return row.map(v => (typeof v === 'number' && Number.isInteger(v) && v < 0) ? dict[-v - 1] : v);
-                    });
-                }
-                raw = raw_compressed;
+                document.getElementById('v-last').textContent = 'Cargando Parquet...';
+
+                // ── Cargar meta (JSON liviano: filtros, tasas, last_update) ──
+                const metaRes = await fetch('operaciones_meta.json?v=' + Date.now());
+                if (!metaRes.ok) throw new Error('No se encontró operaciones_meta.json');
+                const meta = await metaRes.json();
+
+                // ── Inicializar DuckDB y cargar 1 solo Parquet ──
+                const db = await initDuckDB();
+                const conn = await db.connect();
+
+                const buf = await (await fetch('operaciones_data.parquet')).arrayBuffer();
+                await db.registerFileBuffer('orders.parquet', new Uint8Array(buf));
+
+                // Convertir órdenes a array de arrays (mismo formato que antes)
+                // Índices: 0:periodo 1:pais 2:brand 3:tienda 4:fecha 5:is_fulfilled 6:total_usd 7:days
+                //          8:canc_motivo 9:brand_chart 10:genero 11:tipo 12:city 13:sku 14:nombre
+                //          15:carrier 16:is_cancelled_strict 17:is_pago_verificado 18:metodo_entrega
+                //          19:qty 20:ref 21:fulfilled_v2 22:orden_madre
+                const ordersRes = await conn.query(`SELECT
+                    periodo, pais, brand, tienda, fecha,
+                    is_fulfilled, total_usd, days, canc_motivo, brand_chart,
+                    genero, tipo, city, sku, nombre, carrier,
+                    is_cancelled_strict, is_pago_verificado, metodo_entrega,
+                    qty, ref, fulfilled_v2, orden_madre
+                FROM 'orders.parquet'`);
+
+                const raw_orders = ordersRes.toArray().map(r => {
+                    const o = r.toJSON();
+                    return [
+                        String(o.periodo),  String(o.pais),   String(o.brand),  String(o.tienda), String(o.fecha),   // 0-4
+                        Number(o.is_fulfilled),  Number(o.total_usd),  Number(o.days),            // 5-7
+                        String(o.canc_motivo),   String(o.brand_chart), String(o.genero), String(o.tipo), // 8-11
+                        String(o.city),  String(o.sku),  String(o.nombre),  String(o.carrier),    // 12-15
+                        Number(o.is_cancelled_strict), Number(o.is_pago_verificado),               // 16-17
+                        String(o.metodo_entrega), Number(o.qty), String(o.ref),                   // 18-20
+                        Number(o.fulfilled_v2),  String(o.orden_madre)                            // 21-22
+                    ];
+                });
+
+                await conn.close();
+
+                // Reconstruir objeto raw compatible (ppto viene del meta JSON)
+                raw = {
+                    last_update:  meta.last_update,
+                    filters:      meta.filters,
+                    rates:        meta.rates,
+                    name_to_code: meta.name_to_code,
+                    ppto:         meta.ppto || [],
+                    raw_orders:   raw_orders
+                };
+
                 document.getElementById('v-last').textContent = 'Actualización: ' + raw.last_update;
 
                 // Years from periods
@@ -544,9 +599,12 @@
                 populate('s-country', raw.filters.countries, true);
                 populate('s-brand', raw.filters.brands, true);
 
-                updateStores(); // Initial population
+                updateStores();
                 render();
-            } catch (e) { document.body.innerHTML = '<h1>Error cargando datos: ' + e.message + '</h1>'; }
+            } catch (e) {
+                console.error(e);
+                document.body.innerHTML = '<h1 style="padding:2rem;color:#dc2626;">⚠️ Error cargando datos: ' + e.message + '<br><small style="font-size:0.8rem;color:#64748b;">Recuerda usar un servidor local (Live Server / python -m http.server)</small></h1>';
+            }
         }
 
         function updateStores() {

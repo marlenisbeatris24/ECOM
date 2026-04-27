@@ -567,27 +567,72 @@
 
         const usd = (v) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(v || 0);
 
+        async function initDuckDB() {
+            const duckdb = await import('https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@1.28.0/+esm');
+            const BUNDLES = duckdb.getJsDelivrBundles();
+            const bundle = await duckdb.selectBundle(BUNDLES);
+            const worker_url = URL.createObjectURL(
+                new Blob([`importScripts("${bundle.mainWorker}");`], { type: 'text/javascript' })
+            );
+            const worker = new Worker(worker_url);
+            const logger = new duckdb.ConsoleLogger();
+            const db = new duckdb.AsyncDuckDB(logger, worker);
+            await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
+            return db;
+        }
+
         async function init() {
             try {
-                const req = await fetch('recaudacion.json?v=' + Date.now());
-                if (!req.ok) throw new Error("HTTP " + req.status);
-                let raw_compressed = await req.json();
-                
-                // DECOMPRESSOR ENGINE
-                const dict = raw_compressed.__dict__ || [];
-                if (dict.length > 0 && Array.isArray(raw_compressed.data)) {
-                    raw_compressed.data = raw_compressed.data.map(row => {
-                        return row.map(v => (typeof v === 'number' && Number.isInteger(v) && v < 0) ? dict[-v - 1] : v);
-                    });
-                }
-                raw = raw_compressed;
-                
+                document.getElementById('last-update-txt').textContent = 'Cargando Parquet...';
+
+                // ── Meta liviano ──
+                const metaRes = await fetch('recaudacion_meta.json?v=' + Date.now());
+                if (!metaRes.ok) throw new Error('No se encontró recaudacion_meta.json');
+                const meta = await metaRes.json();
+
+                // ── DuckDB — 1 solo Parquet ──
+                const db = await initDuckDB();
+                const conn = await db.connect();
+
+                const buf = await (await fetch('recaudacion_data.parquet')).arrayBuffer();
+                await db.registerFileBuffer('recaudacion.parquet', new Uint8Array(buf));
+
+                // Cargar transacciones — mismas columnas que el array original
+                // Índices originales: 0:periodo 1:pais 2:brand 3:tienda 4:fecha 5:orden_madre
+                //   6:ref 7:amount_usd 8:rate 9:canal 10:is_active 11:year 12:month
+                //   13:region 14:payment_method 15:local_amount
+                const dataRes = await conn.query(`SELECT
+                    periodo, pais, brand, tienda, fecha, orden_madre,
+                    ref, amount_usd, rate, canal, is_active, year, month,
+                    region, payment_method, local_amount
+                FROM 'recaudacion.parquet'`);
+
+                const data = dataRes.toArray().map(r => {
+                    const o = r.toJSON();
+                    return [
+                        String(o.periodo),  String(o.pais),   String(o.brand),  String(o.tienda),  // 0-3
+                        String(o.fecha),    String(o.orden_madre), String(o.ref),                   // 4-6
+                        Number(o.amount_usd), Number(o.rate), String(o.canal),  Number(o.is_active), // 7-10
+                        String(o.year),     String(o.month),  String(o.region), String(o.payment_method), // 11-14
+                        Number(o.local_amount)                                                       // 15
+                    ];
+                });
+
+                await conn.close();
+
+                raw = {
+                    last_update: meta.last_update,
+                    rates:       meta.rates,
+                    ppto:        meta.ppto || [],   // ppto viene del meta JSON
+                    data:        data
+                };
+
                 document.getElementById('last-update-txt').textContent = raw.last_update || '--';
                 initFilters();
                 render();
             } catch (e) {
                 console.error(e);
-                alert("Error cargando el JSON de datos. Revise si el generador Python compiló correctamente.");
+                alert('⚠️ Error cargando Parquet: ' + e.message + '\nRecuerda usar un servidor local (Live Server / python -m http.server)');
             }
         }
 
